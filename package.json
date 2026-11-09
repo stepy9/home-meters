@@ -1,0 +1,19 @@
+{
+  "name": "home-meters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.7"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
+  }
+}
