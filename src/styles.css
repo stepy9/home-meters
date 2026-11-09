@@ -401,3 +401,11 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .upgrade-row { padding: 10px 0; border-top: 1px solid var(--border); }
 .upgrade-row:first-of-type { border-top: 0; }
 .upgrade-impact { margin-top: 4px; }
+.settings-tabs { margin-bottom: 12px; }
+/* On a wide screen the settings sections are a list on the left, as in Garmin tool. */
+@media (min-width: 720px) {
+  main:has(.settings-layout) { max-width: 980px; }
+  .settings-layout { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
+  .settings-tabs { flex-direction: column; position: sticky; top: 72px; padding: 6px; }
+  .settings-tabs button { text-align: left; justify-content: flex-start; }
+}

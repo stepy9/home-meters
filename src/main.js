@@ -4,7 +4,7 @@ import { lang, setLang, t } from "./i18n.js";
 import { renderEntry, setEntryMonth } from "./ui/entry.js";
 import { dismissNotice } from "./ui/notices.js";
 import { leaveOverview, renderOverview } from "./ui/overview.js";
-import { renderSettings } from "./ui/settings.js";
+import { renderSettings, setSettingsSection } from "./ui/settings.js";
 
 const icons = {
   entry: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
@@ -92,6 +92,8 @@ function showSync(s) {
 setLang(lang);
 // "Enter" on the missing-reading reminder: the entry screen at that month.
 document.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-settings-section]");
+  if (link) setSettingsSection(link.dataset.settingsSection);
   const close = event.target.closest("[data-dismiss]");
   if (close) {
     dismissNotice(close.dataset.dismiss);

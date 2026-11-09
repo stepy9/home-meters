@@ -42,7 +42,7 @@ export function noticesHtml() {
       if (!reminderDue(s) || days < -AFTER_END_DAYS) return null;
       const key = days < 0 ? "noticeEnded" : days === 0 ? "noticeToday" : "noticeSoon";
       const text = t(key, { commodity: t(c).toLowerCase(), name: s.name, date: fmtDate(s.contractEnd), days });
-      return `<div class="notice ${days < 0 ? "is-past" : ""}"><span class="notice-icon" style="color:var(--${c})">${commodityIcon(c)}</span><span>${esc(text)} <a href="#settings">${esc(t("noticeAction"))}</a></span></div>`;
+      return `<div class="notice ${days < 0 ? "is-past" : ""}"><span class="notice-icon" style="color:var(--${c})">${commodityIcon(c)}</span><span>${esc(text)} <a href="#settings" data-settings-section="suppliers">${esc(t("noticeAction"))}</a></span></div>`;
     })
     .filter(Boolean);
   // Consumption well above the usual, or below zero (a reading typed wrong).

@@ -271,7 +271,7 @@ function forecastHtml(state) {
 function supplierCardHtml(state) {
   if (!SUPPLIED.includes(ui.commodity)) return "";
   const s = supplierAt(state, ui.commodity, currentMonth());
-  if (!s) return `<section class="card supplier-card"><p class="hint">${esc(t("supplierNone"))} <a href="#settings">${esc(t("tabSettings"))}</a></p></section>`;
+  if (!s) return `<section class="card supplier-card"><p class="hint">${esc(t("supplierNone"))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p></section>`;
   const point = s.point;
   const price = priceAt(state, ui.commodity, currentMonth());
   const details = [s.product, contractPeriod(s), point && ui.commodity !== "water" && `${ui.commodity === "gas" ? "EIC" : "EAN"} ${point}`].filter(Boolean).map(esc).join(" · ");
@@ -304,7 +304,7 @@ export function renderOverview(view) {
   if (weatherOn()) {
     const location = state.config.location;
     const months = [...consumption.keys()].sort();
-    if (!location) weatherNote = `<p class="hint center">${esc(t("weatherNoPlace"))} <a href="#settings">${esc(t("tabSettings"))}</a></p>`;
+    if (!location) weatherNote = `<p class="hint center">${esc(t("weatherNoPlace"))} <a href="#settings" data-settings-section="house">${esc(t("tabSettings"))}</a></p>`;
     else if (months.length) {
       loadWeather(location, months[0], months.at(-1), () => renderOverview(view));
       if (weather.data) {
@@ -369,7 +369,7 @@ export function renderOverview(view) {
     }
     ${ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)}
     ${ui.money ? offersHtml(ui.commodity) : ""}
-    ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings">${esc(t("tabSettings"))}</a></p>` : ""}`;
+    ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}`;
 
   if (years.length) {
     yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));

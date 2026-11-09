@@ -55,9 +55,34 @@ const reminderDay = () => {
 // Set by Vite from vite.config.js; a dev server started without it still shows the page.
 const appVersion = typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__;
 
+// Settings in sections, one shown at a time; the open one is kept per device.
+const SECTIONS = ["general", "suppliers", "house"];
+const sectionKey = "home-meters-settings-section";
+let section = (() => {
+  try {
+    const saved = localStorage.getItem(sectionKey);
+    return SECTIONS.includes(saved) ? saved : "general";
+  } catch {
+    return "general";
+  }
+})();
+export function setSettingsSection(next) {
+  if (!SECTIONS.includes(next)) return;
+  section = next;
+  try {
+    localStorage.setItem(sectionKey, next);
+  } catch {}
+}
+const group = (name, html) => `<div class="settings-group" data-group="${name}" ${name === section ? "" : "hidden"}>${html}</div>`;
+
 export function renderSettings(view, rerender) {
   const state = getState();
+  const tabs = `<div class="segmented settings-tabs">${SECTIONS.map((x) => `<button type="button" data-section="${x}" aria-pressed="${x === section}">${esc(t(`section.${x}`))}</button>`).join("")}</div>`;
   view.innerHTML = `
+    <div class="settings-layout">
+    ${tabs}
+    <div class="settings-content">
+    <div class="settings-group" data-group="general" ${section === "general" ? "" : "hidden"}>
     <section class="card">
       <h2>${esc(t("cloud"))}</h2>
       <p class="hint">${esc(t("cloudHint"))}</p>
@@ -71,7 +96,9 @@ export function renderSettings(view, rerender) {
       <input type="text" inputmode="decimal" id="gas-factor" value="${esc(state.config.gasKwhFactor)}" />
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
-    ${suppliersHtml()}
+    </div>
+    ${group("suppliers", suppliersHtml())}
+    <div class="settings-group" data-group="house" ${section === "house" ? "" : "hidden"}>
     ${upgradesSettingsHtml()}
     <section class="card" id="weather">
       <h2>${esc(t("weatherTitle"))}</h2>
@@ -83,6 +110,8 @@ export function renderSettings(view, rerender) {
       </form>
       <div id="weather-results"></div>
     </section>
+    </div>
+    <div class="settings-group" data-group="general" ${section === "general" ? "" : "hidden"}>
     <section class="card">
       <h2>${esc(t("entrySettings"))}</h2>
       <label class="check"><input type="checkbox" id="bulk-enabled" ${bulkEnabled() ? "checked" : ""} />${esc(t("bulkEnabled"))}</label>
@@ -102,8 +131,19 @@ export function renderSettings(view, rerender) {
         <input type="file" id="import" accept="application/json,.json" hidden />
       </div>
     </section>
-    <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>`;
+    </div>
+    <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>
+    </div>
+    </div>`;
 
+  view.querySelectorAll("[data-section]").forEach((b) =>
+    b.addEventListener("click", () => {
+      setSettingsSection(b.dataset.section);
+      view.querySelectorAll("[data-section]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      view.querySelectorAll("[data-group]").forEach((g) => (g.hidden = g.dataset.group !== section));
+      window.scrollTo(0, 0);
+    }),
+  );
   bindSuppliers(view, rerender);
   bindUpgrades(view, rerender);
   view.querySelector("#weather-clear")?.addEventListener("click", () => update((s) => setConfig(s, { location: null })));
