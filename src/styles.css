@@ -383,3 +383,7 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .offer-main .hint { margin: 2px 0 0; }
 .offer-cost { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .offer-cost small { display: block; font-weight: 600; font-size: 12px; }
+.billing-end { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--muted); margin: 4px 0 6px; }
+.billing-end select { width: auto; min-height: 36px; font-size: 15px; padding: 4px 10px; }
+.suggest { margin: 10px 0 0; font-weight: 600; font-size: 14px; }
+.stat .label::first-letter { text-transform: uppercase; }

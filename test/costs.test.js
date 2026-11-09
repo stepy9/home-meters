@@ -101,3 +101,39 @@ test("offers compare on the last twelve months at the current price", async () =
   close(r.offers[1].cost, 650 * 6 + 3 * 100);
   assert.equal(compareOffers(deleteOffer(s, "a", 8), "electricity", "2026-03").offers.length, 1);
 });
+
+test("billing periods end in the chosen month", async () => {
+  const { billingPeriod, billingPeriodOf } = await import("../src/costs.js");
+  let s = home();
+  assert.deepEqual(billingPeriod(s, "gas", 2026), { from: "2026-01", to: "2026-12" });
+  s = setConfig(s, { billingEnd: { gas: 8 } });
+  assert.equal(s.config.billingEnd.electricity, 12);
+  assert.deepEqual(billingPeriod(s, "gas", 2026), { from: "2025-09", to: "2026-08" });
+  assert.deepEqual(billingPeriodOf(s, "gas", "2026-08"), { from: "2025-09", to: "2026-08" });
+  assert.deepEqual(billingPeriodOf(s, "gas", "2026-09"), { from: "2026-09", to: "2027-08" });
+  assert.equal(normalizeState(JSON.parse(stateText(s))).config.billingEnd.gas, 8);
+});
+
+test("the billing forecast fills the months to come from a year earlier", async () => {
+  const { forecastBilling } = await import("../src/costs.js");
+  let s = emptyState();
+  // Water 2025 all year, 2026 to March: 10 m³ a month in 2025, 12 in 2026.
+  const list = [["2024-12", 0]];
+  let v = 0;
+  for (let m = 1; m <= 12; m++) list.push([`2025-${String(m).padStart(2, "0")}`, (v += 10)]);
+  for (let m = 1; m <= 3; m++) list.push([`2026-${String(m).padStart(2, "0")}`, (v += 12)]);
+  s = readings(s, "water", list);
+  s = setSupplier(s, { id: "wt", commodity: "water", name: "PVK", from: "2020-01" }, 2);
+  s = setPrice(s, { id: "w1", supplierId: "wt", from: "2020-01", unit: 100, advance: 3000, advancePeriod: "quarter" }, 3);
+  const f = forecastBilling(s, "water", "2026-04");
+  assert.deepEqual(f.period, { from: "2026-01", to: "2026-12" });
+  assert.equal(f.actualMonths, 3);
+  assert.equal(f.estimatedMonths, 9);
+  close(f.usage, 3 * 12 + 9 * 10);
+  close(f.cost, (3 * 12 + 9 * 10) * 100);
+  close(f.paid, 12 * 1000);
+  close(f.balance, 12000 - 12600);
+  // A quarterly advance covering 12 600 Kč a year: 3 150, rounded up to 3 200.
+  assert.equal(f.advance.suggested, 3200);
+  assert.equal(f.advance.per, "quarter");
+});

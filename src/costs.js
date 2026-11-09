@@ -1,6 +1,6 @@
 // Costs from consumption and prices: per month, what the kWh (gas: m³ turned into kWh; water: m³ at the water
 // and sewage charge) cost at the price that applied then, plus that month's fixed fees; and what was paid in advances against it.
-import { commodityConsumption, monthlyAdvance, offersOf, priceAt } from "./data.js";
+import { ADVANCE_PERIODS, commodityConsumption, monthAdd, monthDiff, monthlyAdvance, offersOf, priceAt } from "./data.js";
 
 // What a month's consumption (a row of commodityConsumption, gas in kWh) costs at a price (a price period or
 // an offer): { total, parts: { energy, fixed } }.
@@ -32,16 +32,34 @@ export function commodityCosts(state, commodity) {
   return out;
 }
 
-// For a calendar year: what the months with a known cost cost, what was paid in advances over the same months,
-// and the difference (positive: an overpayment to get back; negative: to pay extra). Months without an advance
-// set count as nothing paid.
-export function advanceBalance(state, commodity, year, costs = commodityCosts(state, commodity)) {
+const pad = (n) => String(n).padStart(2, "0");
+
+// The billing period (twelve months) ending in a year: { from, to } as months. With the billing end in December
+// it is the calendar year.
+export function billingPeriod(state, commodity, endYear) {
+  const to = `${endYear}-${pad(state.config.billingEnd?.[commodity] ?? 12)}`;
+  return { from: monthAdd(to, -11), to };
+}
+
+// The billing period a month falls in.
+export function billingPeriodOf(state, commodity, month) {
+  const end = state.config.billingEnd?.[commodity] ?? 12;
+  const year = Number(month.slice(0, 4));
+  return billingPeriod(state, commodity, Number(month.slice(5)) <= end ? year : year + 1);
+}
+
+const monthsOf = ({ from, to }) => Array.from({ length: monthDiff(from, to) + 1 }, (_, i) => monthAdd(from, i));
+
+// For a billing period (or a calendar year): what the months with a known cost cost, what was paid in advances
+// over the same months, and the difference (positive: an overpayment to get back; negative: to pay extra).
+// Months without an advance set count as nothing paid.
+export function advanceBalance(state, commodity, period, costs = commodityCosts(state, commodity)) {
+  if (typeof period === "number") period = { from: `${period}-01`, to: `${period}-12` };
   let cost = 0;
   let paid = 0;
   let months = 0;
   let missing = 0;
-  for (let m = 1; m <= 12; m++) {
-    const month = `${year}-${String(m).padStart(2, "0")}`;
+  for (const month of monthsOf(period)) {
     if (!costs.has(month)) continue;
     const row = costs.get(month);
     if (!row) {
@@ -73,4 +91,59 @@ export function compareOffers(state, commodity, month) {
     })
     .sort((a, b) => (a.cost ?? Infinity) - (b.cost ?? Infinity));
   return { months: months.length, usage, current, offers };
+}
+
+// The whole billing period a month falls in, the months not yet in estimated: each as the same month a year
+// earlier, or (without one) as the average month of the last year; priced at the latest price by then.
+// { period, actualMonths, estimatedMonths, usage, cost, paid, balance, advance: { now, suggested, per } }.
+// cost and the rest are null without prices.
+export function forecastBilling(state, commodity, month) {
+  const period = billingPeriodOf(state, commodity, month);
+  const used = commodityConsumption(state, commodity, { gasInKwh: commodity === "gas" });
+  const known = [...used.keys()].sort();
+  const last = known.at(-1);
+  if (!last) return null;
+  const recent = known.slice(-12).map((m) => used.get(m));
+  const average = recent.length
+    ? {
+        total: recent.reduce((sum, r) => sum + r.total, 0) / recent.length,
+        parts: Object.fromEntries(Object.keys(recent.at(-1).parts).map((k) => [k, recent.reduce((sum, r) => sum + (r.parts[k] ?? 0), 0) / recent.length])),
+      }
+    : null;
+  let usage = 0;
+  let cost = 0;
+  let paid = 0;
+  let priced = true;
+  let actualMonths = 0;
+  let estimatedMonths = 0;
+  for (const m of monthsOf(period)) {
+    let row = used.get(m);
+    if (row) actualMonths += 1;
+    else {
+      row = used.get(monthAdd(m, -12)) ?? average;
+      if (!row) continue;
+      estimatedMonths += 1;
+    }
+    usage += row.total;
+    const price = priceAt(state, commodity, m);
+    if (!price || price.unit == null) priced = false;
+    else {
+      cost += monthCost(commodity, row, price).total;
+      paid += monthlyAdvance(price) ?? 0;
+    }
+  }
+  const nowPrice = priceAt(state, commodity, month);
+  const per = ADVANCE_PERIODS[nowPrice?.advancePeriod ?? "month"];
+  // A suggested advance that covers the forecast cost, rounded up to a hundred crowns per payment.
+  const suggested = priced ? Math.ceil(((cost / 12) * per) / 100) * 100 : null;
+  return {
+    period,
+    actualMonths,
+    estimatedMonths,
+    usage,
+    cost: priced ? cost : null,
+    paid: priced ? paid : null,
+    balance: priced ? paid - cost : null,
+    advance: { now: nowPrice?.advance ?? null, suggested, per: nowPrice?.advancePeriod ?? "month" },
+  };
 }

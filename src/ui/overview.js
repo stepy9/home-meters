@@ -4,7 +4,7 @@ import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
-import { advanceBalance, commodityCosts } from "../costs.js";
+import { advanceBalance, billingPeriod, commodityCosts, forecastBilling } from "../costs.js";
 import { currentMonth } from "./month-picker.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
@@ -180,11 +180,16 @@ function tableHtml(years, table) {
 
 // The year's total, and against the previous year over the same months only, so a running year compares fairly.
 // Advances paid against the costs over the same months: an estimate of the overpayment or the extra to pay.
+// "9/2025 – 8/2026", or just the year for a calendar-year period.
+const periodLabel = ({ from, to }) => (from.endsWith("-01") && to.endsWith("-12") ? from.slice(0, 4) : `${Number(from.slice(5))}/${from.slice(0, 4)} – ${Number(to.slice(5))}/${to.slice(0, 4)}`);
+
 function advanceHtml(state, year) {
-  const b = advanceBalance(state, ui.commodity, year);
+  // The billing period that ends in the shown year.
+  const period = billingPeriod(state, ui.commodity, year);
+  const b = advanceBalance(state, ui.commodity, period);
   if (!b.months || !b.paid) return "";
   const over = b.balance >= 0;
-  return `<div class="stat"><div class="label">${esc(t("advancesYear", { year }))}</div><div class="value ${over ? "down" : "up"}">${over ? "+" : "−"}${fmt(Math.abs(b.balance), 0)} Kč</div><div class="sub">${esc(t(over ? "overpaid" : "underpaid"))} · ${fmt(b.paid, 0)} / ${fmt(b.cost, 0)} Kč</div></div>`;
+  return `<div class="stat"><div class="label">${esc(t("advancesYear", { year: periodLabel(period) }))}</div><div class="value ${over ? "down" : "up"}">${over ? "+" : "−"}${fmt(Math.abs(b.balance), 0)} Kč</div><div class="sub">${esc(t(over ? "overpaid" : "underpaid"))} · ${fmt(b.paid, 0)} / ${fmt(b.cost, 0)} Kč</div></div>`;
 }
 
 function statsHtml(table, year, state) {
@@ -206,6 +211,36 @@ function statsHtml(table, year, state) {
     ${compare}
     ${ui.money ? advanceHtml(state, year) : ""}
   </div>`;
+}
+
+// The billing period now running, the months to come estimated from a year earlier: expected use and cost, the
+// advances, the likely result and a suggested advance when the current one is off.
+function forecastHtml(state) {
+  if (!SUPPLIED.includes(ui.commodity)) return "";
+  const f = forecastBilling(state, ui.commodity, currentMonth());
+  if (!f || !f.estimatedMonths) return "";
+  const stat = (label, value, sub = "", cls = "") => `<div class="stat"><div class="label">${esc(label)}</div><div class="value ${cls}">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
+  // Gas as on the meter, in m³, with the kWh it is billed by below.
+  const usage =
+    ui.commodity === "gas"
+      ? stat(t("forecastUsage"), `~${fmt(f.usage / state.config.gasKwhFactor, 0)}`, `m³ · ${fmt(f.usage, 0)} kWh`)
+      : stat(t("forecastUsage"), `~${fmt(f.usage, 0)}`, ui.commodity === "water" ? "m³" : "kWh");
+  const cells = [usage];
+  if (f.cost != null) {
+    cells.push(stat(t("forecastCost"), `~${fmt(f.cost, 0)}`, "Kč"));
+    const over = f.balance >= 0;
+    cells.push(stat(t(over ? "overpaid" : "underpaid"), `${over ? "+" : "−"}${fmt(Math.abs(f.balance), 0)} Kč`, esc(t("forecastPaid", { paid: fmt(f.paid, 0) })), over ? "down" : "up"));
+  }
+  const a = f.advance;
+  // Suggest a different advance only when it is off by more than a rounding step.
+  const suggest = a.suggested != null && a.now != null && Math.abs(a.suggested - a.now) >= 100;
+  return `
+    <section class="card">
+      <h2>${esc(t("forecastTitle", { period: periodLabel(f.period) }))}</h2>
+      <p class="hint">${esc(t("forecastHint", { actual: f.actualMonths, estimated: f.estimatedMonths }))}</p>
+      <div class="stats">${cells.join("")}</div>
+      ${suggest ? `<p class="suggest ${a.suggested > a.now ? "up" : "down"}">${esc(t("forecastAdvance", { suggested: fmt(a.suggested, 0), now: fmt(a.now, 0), per: t(`per.${a.per}`) }))}</p>` : ""}
+    </section>`;
 }
 
 // The current supplier, with the contract end and current prices; a hint to add one when there is none.
@@ -261,6 +296,7 @@ export function renderOverview(view) {
     <div class="segmented">${tabs}</div>
     ${unitToggle}
     ${supplierCardHtml(state)}
+    ${forecastHtml(state)}
     ${
       years.length
         ? `

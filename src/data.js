@@ -22,6 +22,8 @@ export const meterById = (id) => METERS.find((meter) => meter.id === id);
 export const defaultConfig = () => ({
   active: { "el-vt": true, "el-nt": false, gas: true, water: true },
   gasKwhFactor: 10.6,
+  // The month (1–12) each commodity's billing period ends with; 12 is the calendar year.
+  billingEnd: { electricity: 12, gas: 12, water: 12 },
   updatedAt: 0,
 });
 export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, config: defaultConfig() });
@@ -82,6 +84,7 @@ export function normalizeState(raw) {
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
+  for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
 }
@@ -124,7 +127,9 @@ export function deleteReading(state, meter, month, now = Date.now()) {
 }
 
 export function setConfig(state, changes, now = Date.now()) {
-  return { ...state, config: { ...state.config, ...changes, active: { ...state.config.active, ...changes.active }, updatedAt: now } };
+  const config = { ...state.config, ...changes, active: { ...state.config.active, ...changes.active } };
+  config.billingEnd = { ...state.config.billingEnd, ...changes.billingEnd };
+  return { ...state, config: { ...config, updatedAt: now } };
 }
 
 export const readingsOf = (state, meter) =>

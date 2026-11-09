@@ -11,6 +11,7 @@ import {
   deleteSupplier,
   isTwoTariff,
   pricesOf,
+  setConfig,
   setPrice,
   setSupplier,
   supplierAt,
@@ -251,6 +252,9 @@ function groupHtml(state, commodity) {
   return `
     <div class="supplier-group">
       <h3 class="supplier-group-title"><span class="supplier-c" style="color:var(--${commodity})">${commodityIcon(commodity)}</span>${esc(t(commodity))}</h3>
+      <label class="billing-end">${esc(t("billingEnd"))}
+        <select data-billing-end="${commodity}">${options(range(1, 12), state.config.billingEnd?.[commodity] ?? 12, (m) => monthsLong(m))}</select>
+      </label>
       ${list.length ? list.map(itemHtml).join("") : `<p class="hint">${esc(t("suppliersEmptyOne"))}</p>`}
       ${open ? formHtml(commodity, current) : `<div class="btn-row"><button type="button" class="btn" data-add-supplier="${commodity}">+ ${esc(t("supplierAdd"))}</button></div>`}
     </div>`;
@@ -336,6 +340,9 @@ export function bindSuppliers(root, rerender) {
       rerender();
       root.querySelector("#supplier-form")?.scrollIntoView({ block: "start", behavior: "smooth" });
     }),
+  );
+  section.querySelectorAll("[data-billing-end]").forEach((select) =>
+    select.addEventListener("change", () => update((state) => setConfig(state, { billingEnd: { [select.dataset.billingEnd]: Number(select.value) } }))),
   );
   section.querySelectorAll("[data-toggle-prices]").forEach((b) =>
     b.addEventListener("click", () => {
