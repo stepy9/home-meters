@@ -59,7 +59,7 @@ export function householdHtml(state) {
   const priced = new Map([...costs].filter(([, c]) => Object.keys(c.parts).length));
   const { years, table } = byYear(priced);
   if (!years.includes(hh.year)) hh.year = years[0] ?? null;
-  let body = `<p class="empty">${esc(t("householdEmpty"))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>`;
+  let body = `<p class="info-note">${esc(t("householdEmpty"))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>`;
   if (years.length) {
     const row = table.get(hh.year);
     const { total, months } = yearTotal(row);
@@ -89,8 +89,9 @@ export function householdHtml(state) {
         <div class="table-wrap"><table><thead><tr><th>Kč</th>${cols.map((y) => `<th>${y}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table></div>
       </section>`;
   }
-  const missingNote = missing.size ? `<p class="hint center">${esc(t("householdMissing", { list: [...missing].map((c) => t(c).toLowerCase()).join(", ") }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : "";
-  return { html: body + missingNote + benchmarkHtml(state), row: years.length ? table.get(hh.year) : null };
+  const missingNote = missing.size ? `<p class="info-note">${esc(t("householdMissing", { list: [...missing].map((c) => t(c).toLowerCase()).join(", ") }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : "";
+  // Notes above the cards, so the cards flow side by side without anything in between.
+  return { html: missingNote + body + benchmarkHtml(state), row: years.length ? table.get(hh.year) : null };
 }
 
 export function drawHousehold(view, charts, row, rerender) {
