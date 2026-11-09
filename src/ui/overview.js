@@ -190,7 +190,7 @@ function supplierCardHtml(state) {
   if (!SUPPLIED.includes(ui.commodity)) return "";
   const s = supplierAt(state, ui.commodity, currentMonth());
   if (!s) return `<section class="card supplier-card"><p class="hint">${esc(t("supplierNone"))} <a href="#settings">${esc(t("tabSettings"))}</a></p></section>`;
-  const point = s.points[ui.commodity];
+  const point = s.point;
   const details = [s.product, `${t("since")} ${fmtMonth(s.from)}`, point && `${ui.commodity === "gas" ? "EIC" : "EAN"} ${point}`].filter(Boolean).map(esc).join(" · ");
   return `
     <section class="card supplier-card">

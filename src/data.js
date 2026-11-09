@@ -53,10 +53,11 @@ export function normalizeState(raw) {
     if (!r || r.id !== id) continue;
     const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
     if (r.deleted) state.suppliers[id] = { id, deleted: true, updatedAt };
-    else {
-      const supplier = cleanSupplier(r, updatedAt);
-      if (supplier) state.suppliers[id] = supplier;
-    }
+    else
+      for (const part of splitDraftSupplier(r)) {
+        const supplier = cleanSupplier(part, updatedAt);
+        if (supplier) state.suppliers[supplier.id] = supplier;
+      }
   }
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
@@ -188,25 +189,29 @@ export function changedKeys(from, to) {
 const isDate = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 const text = (value, max = 200) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
-// A supplier record with its fields in a fixed order, or null when it lacks a name, a commodity or a start.
+// A supplier record (one commodity, as product, fixed price and supply point differ between electricity and
+// gas) with its fields in a fixed order, or null when it lacks a name, a commodity or a start.
 export function cleanSupplier(r, updatedAt) {
-  const commodities = SUPPLIED.filter((c) => r.commodities?.includes(c));
   const name = text(r.name, 80);
-  if (!r.id || !name || !commodities.length || !isMonth(r.from)) return null;
-  const points = {};
-  for (const c of commodities) if (text(r.points?.[c], 40)) points[c] = text(r.points[c], 40);
+  if (!r.id || !name || !SUPPLIED.includes(r.commodity) || !isMonth(r.from)) return null;
   return {
     id: String(r.id),
-    commodities,
+    commodity: r.commodity,
     name,
     from: r.from,
     product: text(r.product, 80),
     contractEnd: isDate(r.contractEnd) ? r.contractEnd : "",
-    points,
+    point: text(r.point, 40),
     customerNo: text(r.customerNo, 40),
     note: text(r.note, 500),
     updatedAt,
   };
+}
+
+// An early draft kept one record for both commodities ({commodities: [...], points: {...}}): split into one each.
+function splitDraftSupplier(r) {
+  if (r.commodity || !Array.isArray(r.commodities)) return [r];
+  return SUPPLIED.filter((c) => r.commodities.includes(c)).map((c, i) => ({ ...r, id: i === 0 ? r.id : `${r.id}-${c}`, commodity: c, point: r.points?.[c] }));
 }
 
 export function setSupplier(state, fields, now = Date.now()) {
@@ -223,7 +228,7 @@ export function deleteSupplier(state, id, now = Date.now()) {
 // A commodity's suppliers, oldest first.
 export const suppliersOf = (state, commodity) =>
   Object.values(state.suppliers ?? {})
-    .filter((s) => !s.deleted && s.commodities.includes(commodity))
+    .filter((s) => !s.deleted && s.commodity === commodity)
     .sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
 
 // Who supplied a commodity in a month: the latest that started by then.
