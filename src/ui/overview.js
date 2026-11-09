@@ -94,29 +94,45 @@ const supplierMarks = (marks) => ({
       ctx.moveTo(x, chartArea.top);
       ctx.lineTo(x, chartArea.bottom);
       ctx.stroke();
-      // The name beside the line, kept inside the chart.
-      const width = ctx.measureText(name).width;
-      const left = x + 4 + width > chartArea.right ? x - 4 - width : x + 4;
-      // Labels one under another, so marks close together stay readable.
-      ctx.fillText(name, left, chartArea.top + 10 + (n % 3) * 13);
+      // A numbered badge on top of the line; the names are listed under the chart.
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, chartArea.top - 9, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = cssVar("--surface");
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(n + 1), x, chartArea.top - 8.5);
+      ctx.setLineDash([4, 4]);
     });
     ctx.restore();
   },
 });
 
-function yearChart(canvas, state, row) {
-  const meters = metersOf(state, ui.commodity);
-  const split = !ui.money && meters.length > 1;
+// Supplier changes and house upgrades in the shown year, in month order: { index, name, color, after, month }.
+function chartMarks(state) {
   // Supplier changes in the shown year (the very first supplier is not a change).
   const marks = SUPPLIED.includes(ui.commodity)
     ? suppliersOf(state, ui.commodity)
         .slice(1)
         .filter((s) => Number(s.from.slice(0, 4)) === ui.year)
-        .map((s) => ({ index: Math.floor((Number(s.from.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: s.name }))
+        .map((s) => ({ index: Math.floor((Number(s.from.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: s.name, month: s.from, supplier: true }))
     : [];
   // House upgrades in the shown year, in the commodity's color.
   for (const u of upgradesOf(state, ui.commodity).filter((u) => Number(u.month.slice(0, 4)) === ui.year))
-    marks.push({ index: Math.floor((Number(u.month.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: u.name || upgradeKindsLabel(u, t), color: cssVar(commodityColor[ui.commodity]), after: true });
+    marks.push({ index: Math.floor((Number(u.month.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: u.name || upgradeKindsLabel(u, t), color: cssVar(commodityColor[ui.commodity]), after: true, month: u.month });
+  return marks.sort((a, b) => a.month.localeCompare(b.month));
+}
+
+function marksLegendHtml(marks) {
+  if (!marks.length) return "";
+  return `<ol class="mark-legend">${marks.map((m) => `<li><span class="mark-badge" style="background:${m.color ?? cssVar("--text")}">${marks.indexOf(m) + 1}</span><span>${esc(m.name)} <span class="hint">· ${esc(m.supplier ? t("markSupplier", { month: fmtMonth(m.month) }) : fmtMonth(m.month))}</span></span></li>`).join("")}</ol>`;
+}
+
+function yearChart(canvas, state, row) {
+  const meters = metersOf(state, ui.commodity);
+  const split = !ui.money && meters.length > 1;
+  const marks = chartMarks(state);
   const datasets = split
     ? meters.map((m, i) => ({
         label: t(`short.${m.id}`),
@@ -134,7 +150,7 @@ function yearChart(canvas, state, row) {
         maintainAspectRatio: false,
         scales: { ...axis(), x: { stacked: split, grid: { display: false } }, y: { ...axis().y, stacked: split } },
         plugins: { legend: { display: split, position: "bottom" }, tooltip },
-        layout: { padding: { top: marks.length ? 14 + (Math.min(marks.length, 3) - 1) * 13 : 0 } },
+        layout: { padding: { top: marks.length ? 20 : 0 } },
       },
       plugins: [supplierMarks(marks)],
     }),
@@ -355,6 +371,7 @@ export function renderOverview(view) {
         ${yearChips("data-year", (y) => y === ui.year, () => cssVar("--text"))}
         ${statsHtml(table, ui.year, state)}
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
+        ${marksLegendHtml(chartMarks(state))}
       </section>
       <section class="card">
         <h2>${esc(t("compareChart"))}</h2>
