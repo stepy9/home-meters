@@ -7,7 +7,7 @@ import { getState, replaceState } from "./store.js";
 // Each sync reads the file, merges it with what is here record by record, and writes back what changed.
 
 // The app's key from the Dropbox App Console (an "App folder" app); not a secret, as PKCE needs none.
-export const dropboxAppKey = "";
+export const dropboxAppKey = "4a022pi6zi7aouu";
 
 const tokenKey = "home-meters-dropbox";
 const verifierKey = "home-meters-dropbox-verifier";
