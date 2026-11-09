@@ -1,7 +1,7 @@
 import "./styles.css";
 import { cloudStatus, onCloudStatus, setupCloud } from "./cloud.js";
 import { lang, setLang, t } from "./i18n.js";
-import { renderEntry } from "./ui/entry.js";
+import { renderEntry, setEntryMonth } from "./ui/entry.js";
 import { leaveOverview, renderOverview } from "./ui/overview.js";
 import { renderSettings } from "./ui/settings.js";
 
@@ -89,6 +89,16 @@ function showSync(s) {
 }
 
 setLang(lang);
+// "Enter" on the missing-reading reminder: the entry screen at that month.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-goto-month]");
+  if (!button) return;
+  setEntryMonth(button.dataset.gotoMonth);
+  if (location.hash === "#entry" || !location.hash) render();
+  else location.hash = "#entry";
+  window.scrollTo(0, 0);
+});
+
 window.addEventListener("hashchange", () => {
   render();
   window.scrollTo(0, 0);

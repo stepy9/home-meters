@@ -17,6 +17,8 @@ const defaultMonth = () => {
 };
 
 let month = defaultMonth();
+// Opening the entry for a given month (from the missing-reading reminder).
+export const setEntryMonth = (next) => (month = next);
 
 const activeMeters = (state) => METERS.filter((m) => state.config.active[m.id]);
 

@@ -387,3 +387,6 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .billing-end select { width: auto; min-height: 36px; font-size: 15px; padding: 4px 10px; }
 .suggest { margin: 10px 0 0; font-weight: 600; font-size: 14px; }
 .stat .label::first-letter { text-transform: uppercase; }
+.notice.is-info { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.notice.is-info .notice-icon { color: var(--accent); }
+.link-inline { border: 0; background: none; padding: 0 2px; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }

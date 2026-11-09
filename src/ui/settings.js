@@ -3,6 +3,7 @@ import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } f
 import { fmtMonth, fmtTime, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bulkEnabled, setBulkEnabled } from "./bulk.js";
+import { reminderCalendar } from "../reminder.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 
@@ -39,6 +40,16 @@ function summaryHtml(summary) {
   return `<ul class="cloud-items">${list}</ul><p class="hint">${esc(movedLine)}</p>`;
 }
 
+// The day of the month for the calendar reminder, kept per device.
+const dayKey = "home-meters-reminder-day";
+const reminderDay = () => {
+  try {
+    return Number(localStorage.getItem(dayKey)) || 1;
+  } catch {
+    return 1;
+  }
+};
+
 // Set by Vite from vite.config.js; a dev server started without it still shows the page.
 const appVersion = typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__;
 
@@ -63,6 +74,12 @@ export function renderSettings(view, rerender) {
       <h2>${esc(t("entrySettings"))}</h2>
       <label class="check"><input type="checkbox" id="bulk-enabled" ${bulkEnabled() ? "checked" : ""} />${esc(t("bulkEnabled"))}</label>
       <p class="hint">${esc(t("bulkEnabledHint"))}</p>
+      <h3 class="bulk-sub">${esc(t("calendarTitle"))}</h3>
+      <div class="two-cols">
+        <select id="reminder-day" aria-label="${esc(t("day"))}">${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}" ${i + 1 === reminderDay() ? "selected" : ""}>${esc(t("calendarDay", { day: i + 1 }))}</option>`).join("")}</select>
+        <button type="button" class="btn" id="reminder-ics">${esc(t("calendarDownload"))}</button>
+      </div>
+      <p class="hint">${esc(t("calendarHint"))}</p>
     </section>
     <section class="card">
       <h2>${esc(t("backup"))}</h2>
@@ -90,6 +107,17 @@ export function renderSettings(view, rerender) {
     else event.target.value = getState().config.gasKwhFactor;
   });
   view.querySelector("#bulk-enabled").addEventListener("change", (event) => setBulkEnabled(event.target.checked));
+  view.querySelector("#reminder-day").addEventListener("change", (event) => {
+    try {
+      localStorage.setItem(dayKey, event.target.value);
+    } catch {}
+  });
+  view.querySelector("#reminder-ics").addEventListener("click", () => {
+    const ics = reminderCalendar({ day: reminderDay(), title: t("calendarEvent"), description: t("calendarEventText"), url: location.origin + location.pathname });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "home-meters-odecet.ics" });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
   view.querySelector("#export").addEventListener("click", () => {
     const blob = new Blob([stateText(getState())], { type: "application/json" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.json` });
