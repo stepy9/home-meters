@@ -103,7 +103,8 @@ document.getElementById("theme-switch").addEventListener("click", (event) => {
   render();
 });
 
-  dot.title = s.error ?? "";
+// The sync state shows in Settings; redraw it there when it changes.
+function showSync() {
   if (currentTab() === "settings") render();
 }
 
