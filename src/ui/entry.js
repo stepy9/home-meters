@@ -60,7 +60,7 @@ function refreshCard(card) {
 
 function historyHtml(state) {
   const meters = activeMeters(state);
-  const months = [...new Set(meters.flatMap((m) => readingsOf(state, m.id).map((r) => r.month)))].sort().reverse().slice(0, 12);
+  const months = [...new Set(meters.flatMap((m) => readingsOf(state, m.id).map((r) => r.month)))].sort().reverse().slice(0, 3);
   if (!months.length) return "";
   const rows = months
     .map((m) => {
