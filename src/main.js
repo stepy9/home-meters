@@ -148,3 +148,6 @@ onCloudStatus(showSync);
 render();
 showSync(cloudStatus());
 setupCloud();
+
+// Offline support (see public/sw.js); only in the built app, so the dev server always serves fresh files.
+if (import.meta.env.PROD && "serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});

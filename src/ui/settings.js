@@ -5,6 +5,7 @@ import { getState, update } from "../store.js";
 import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { reminderCalendar } from "../reminder.js";
 import { searchPlaces } from "../weather.js";
+import { csvExport } from "../household.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 import { bindUpgrades, upgradesSettingsHtml } from "./upgrades.js";
@@ -99,6 +100,14 @@ export function renderSettings(view, rerender) {
     </div>
     ${group("suppliers", suppliersHtml())}
     <div class="settings-group" data-group="house" ${section === "house" ? "" : "hidden"}>
+    <section class="card">
+      <h2>${esc(t("houseTitle"))}</h2>
+      <p class="hint">${esc(t("houseHint"))}</p>
+      <div class="two-cols">
+        <div><label class="field" for="house-area">${esc(t("houseArea"))}</label><div class="meter-input"><input type="text" inputmode="decimal" id="house-area" value="${state.config.house?.area ?? ""}" /><span class="unit">m²</span></div></div>
+        <div><label class="field" for="house-people">${esc(t("housePeople"))}</label><input type="text" inputmode="numeric" id="house-people" value="${state.config.house?.people ?? ""}" /></div>
+      </div>
+    </section>
     ${upgradesSettingsHtml()}
     <section class="card" id="weather">
       <h2>${esc(t("weatherTitle"))}</h2>
@@ -127,6 +136,7 @@ export function renderSettings(view, rerender) {
       <h2>${esc(t("backup"))}</h2>
       <div class="btn-row">
         <button class="btn" id="export">${esc(t("exportJson"))}</button>
+        <button class="btn" id="export-csv">${esc(t("exportCsv"))}</button>
         <label class="btn" for="import">${esc(t("importJson"))}</label>
         <input type="file" id="import" accept="application/json,.json" hidden />
       </div>
@@ -145,6 +155,12 @@ export function renderSettings(view, rerender) {
     }),
   );
   bindSuppliers(view, rerender);
+  for (const [id, key] of [["#house-area", "area"], ["#house-people", "people"]])
+    view.querySelector(id).addEventListener("change", (e) => {
+      const v = parseNumber(e.target.value);
+      if (Number.isNaN(v) || (v != null && v <= 0)) return toast(t("priceInvalid"));
+      update((s) => setConfig(s, { house: { [key]: v } }));
+    });
   bindUpgrades(view, rerender);
   view.querySelector("#weather-clear")?.addEventListener("click", () => update((s) => setConfig(s, { location: null })));
   view.querySelector("#weather-search").addEventListener("submit", async (event) => {
@@ -192,6 +208,13 @@ export function renderSettings(view, rerender) {
   view.querySelector("#export").addEventListener("click", () => {
     const blob = new Blob([stateText(getState())], { type: "application/json" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.json` });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  view.querySelector("#export-csv").addEventListener("click", () => {
+    const names = { month: t("month"), reading: t("csvReading"), use: t("csvUse"), cost: t("costs"), total: t("total").toLowerCase(), electricity: t("electricity").toLowerCase(), gas: t("gas").toLowerCase(), water: t("water").toLowerCase(), meters: Object.fromEntries(METERS.map((m) => [m.id, t(`meter.${m.id}`)])) };
+    const blob = new Blob([csvExport(getState(), names)], { type: "text/csv;charset=utf-8" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.csv` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });

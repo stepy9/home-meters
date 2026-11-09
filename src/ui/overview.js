@@ -10,6 +10,9 @@ import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
 import { bindOffers, offersHtml } from "./offers.js";
 import { upgradesOverviewHtml } from "./upgrades.js";
+import { drawHousehold, householdHtml } from "./household.js";
+import { bindBills, billsHtml } from "./bills.js";
+import { priceHistory } from "../household.js";
 import { monthlyDegreeDays, perDegreeDays } from "../weather.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
@@ -187,6 +190,40 @@ function compareChart(canvas, years, table) {
   );
 }
 
+// The unit price month by month from the price lists, stepped where it changed.
+function priceChartHtml(state) {
+  if (!SUPPLIED.includes(ui.commodity)) return "";
+  const h = priceHistory(state, ui.commodity, currentMonth());
+  if (!h || h.months.length < 2) return "";
+  const known = h.unit.filter((v) => v != null);
+  const first = known[0];
+  const last = known.at(-1);
+  const delta = first ? last / first - 1 : null;
+  const unit = ui.commodity === "water" ? "Kč/m³" : "Kč/kWh";
+  return `<section class="card"><h2>${esc(t("priceChartTitle"))}</h2>
+    <p class="hint">${esc(t(ui.commodity === "water" ? "priceChartWater" : ui.commodity === "gas" ? "priceChartGas" : "priceChartEl", { first: fmt(first, 2), last: fmt(last, 2), unit, from: fmtMonth(h.months[0]) }))}${delta ? ` <strong class="${delta > 0 ? "up" : "down"}">${fmtPct(delta)}</strong>` : ""}</p>
+    <div class="chart-box"><canvas id="price-chart"></canvas></div></section>`;
+}
+
+function priceChart(canvas, state) {
+  const h = priceHistory(state, ui.commodity, currentMonth());
+  const unit = ui.commodity === "water" ? "Kč/m³" : "Kč/kWh";
+  const datasets = [{ label: ui.commodity === "electricity" ? t("short.el-vt") : t(ui.commodity), data: h.unit, borderColor: cssVar(commodityColor[ui.commodity]), backgroundColor: cssVar(commodityColor[ui.commodity]), stepped: true, pointRadius: 0, borderWidth: 2.5 }];
+  if (h.unitNt) datasets.push({ label: t("short.el-nt"), data: h.unitNt, borderColor: cssVar("--electricity-2"), backgroundColor: cssVar("--electricity-2"), stepped: true, pointRadius: 0, borderWidth: 2 });
+  charts.push(
+    new Chart(canvas, {
+      type: "line",
+      data: { labels: h.months.map((m) => `${t("months")[Number(m.slice(5)) - 1]} ${m.slice(2, 4)}`), datasets },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } }, y: { beginAtZero: true, ticks: { callback: (v) => fmt(v, 2) } } },
+        plugins: { legend: { display: datasets.length > 1, position: "bottom" }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y == null ? "–" : `${fmt(ctx.parsed.y, 2)} ${unit}`}` } } },
+      },
+    }),
+  );
+}
+
 function tableHtml(years, table) {
   const cols = years.slice(0, 6);
   const head = cols.map((y) => `<th>${y}</th>`).join("");
@@ -301,10 +338,30 @@ function supplierCardHtml(state) {
     </section>`;
 }
 
+function renderHousehold(view, state) {
+  const tabs = [...COMMODITIES, "home"].map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c] ?? "--accent")}">${commodityIcon(c)}<span>${esc(t(c === "home" ? "householdTab" : c))}</span></button>`).join("");
+  const { html, row } = householdHtml(state);
+  view.innerHTML = `${noticesHtml()}<div class="segmented">${tabs}</div>${html}`;
+  drawHousehold(view, charts, row, () => renderOverview(view));
+  bindTabs(view);
+}
+
+function bindTabs(view) {
+  view.querySelectorAll("[data-commodity]").forEach((b) =>
+    b.addEventListener("click", () => {
+      ui.commodity = b.dataset.commodity;
+      ui.compared = null;
+      remember();
+      renderOverview(view);
+    }),
+  );
+}
+
 export function renderOverview(view) {
   destroyCharts();
   chartDefaults();
   const state = getState();
+  if (ui.commodity === "home") return renderHousehold(view, state);
   // Costs leave out months without a known price; how many is said below the chart.
   let missingPrices = 0;
   let consumption;
@@ -345,7 +402,7 @@ export function renderOverview(view) {
   if (!years.includes(ui.year)) ui.year = years[0] ?? null;
   if (!ui.compared || ![...ui.compared].some((y) => years.includes(y))) ui.compared = new Set(years.slice(0, 3));
 
-  const tabs = COMMODITIES.map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c])}">${commodityIcon(c)}<span>${esc(t(c))}</span></button>`).join("");
+  const tabs = [...COMMODITIES, "home"].map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c] ?? "--accent")}">${commodityIcon(c)}<span>${esc(t(c === "home" ? "householdTab" : c))}</span></button>`).join("");
   const moneyToggle = `<div class="segmented">${[false, true].map((m) => `<button type="button" data-money="${m}" aria-pressed="${m === ui.money}">${esc(t(m ? "viewCosts" : "viewUsage"))}</button>`).join("")}</div>`;
   const gasToggle =
     ui.commodity === "gas" && !ui.money
@@ -385,6 +442,8 @@ export function renderOverview(view) {
         : weatherOn() ? "" : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
     }
     ${ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)}
+    ${ui.money && SUPPLIED.includes(ui.commodity) ? billsHtml(state, ui.commodity) : ""}
+    ${ui.money ? priceChartHtml(state) : ""}
     ${ui.money ? offersHtml(ui.commodity) : ""}
     ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}`;
 
@@ -394,14 +453,9 @@ export function renderOverview(view) {
   }
 
   bindOffers(view, () => renderOverview(view));
-  view.querySelectorAll("[data-commodity]").forEach((b) =>
-    b.addEventListener("click", () => {
-      ui.commodity = b.dataset.commodity;
-      ui.compared = null;
-      remember();
-      renderOverview(view);
-    }),
-  );
+  bindBills(view, () => renderOverview(view));
+  if (view.querySelector("#price-chart")) priceChart(view.querySelector("#price-chart"), state);
+  bindTabs(view);
   view.querySelectorAll("[data-money]").forEach((b) =>
     b.addEventListener("click", () => {
       ui.money = b.dataset.money === "true";

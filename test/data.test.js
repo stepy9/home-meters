@@ -98,7 +98,7 @@ test("normalizing drops what does not fit and round-trips", () => {
   const dirty = normalizeState({ readings: { x: { meter: "nope", month: "2026-01", value: 1 } }, config: { gasKwhFactor: -1 } });
   assert.deepEqual(dirty.readings, {});
   assert.equal(dirty.config.gasKwhFactor, 10.6);
-  assert.throws(() => normalizeState({ version: 3 }));
+  assert.throws(() => normalizeState({ version: 4 }));
   assert.doesNotThrow(() => normalizeState({ version: 1 }));
 });
 

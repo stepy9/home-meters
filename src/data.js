@@ -4,9 +4,9 @@
 // Suppliers (electricity and gas) are records of their own, each valid from a month until the next one starts,
 // and each supplier has price periods of its own (prices change during a contract too).
 
-// Version 2 added suppliers, their prices, offers and house upgrades. An app that only knows version 1 refuses version 2 data instead
+// Version 3 added bills (what a supplier really billed). Version 2 added suppliers, their prices, offers and house upgrades. An app that only knows version 1 refuses version 2 data instead
 // of syncing it and dropping them.
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 // Every commodity has a supplier; water usually keeps the same one, electricity and gas can switch.
 export const SUPPLIED = ["electricity", "gas", "water"];
 
@@ -28,9 +28,11 @@ export const defaultConfig = () => ({
   // How many months one bill covers (water is often billed every quarter).
   billingMonths: { electricity: 12, gas: 12, water: 12 },
   location: null,
+  // The house, for use per m² and per person: { area (m², heated), people }.
+  house: { area: null, people: null },
   updatedAt: 0,
 });
-export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, upgrades: {}, config: defaultConfig() });
+export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, upgrades: {}, bills: {}, config: defaultConfig() });
 
 export const readingKey = (meter, month) => `${meter}|${month}`;
 
@@ -85,6 +87,15 @@ export function normalizeState(raw) {
       if (offer) state.offers[id] = offer;
     }
   }
+  for (const [id, r] of Object.entries(raw.bills ?? {})) {
+    if (!r || r.id !== id) continue;
+    const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
+    if (r.deleted) state.bills[id] = { id, deleted: true, updatedAt };
+    else {
+      const bill = cleanBill(r, updatedAt);
+      if (bill) state.bills[id] = bill;
+    }
+  }
   for (const [id, r] of Object.entries(raw.upgrades ?? {})) {
     if (!r || r.id !== id) continue;
     const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
@@ -101,6 +112,8 @@ export function normalizeState(raw) {
   if (c.location && isNumber(c.location.lat) && isNumber(c.location.lon)) state.config.location = { name: text(c.location.name, 120), lat: c.location.lat, lon: c.location.lon };
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
   for (const k of SUPPLIED) if (BILLING_MONTHS.includes(c.billingMonths?.[k])) state.config.billingMonths[k] = c.billingMonths[k];
+  const positive = (v) => (isNumber(v) && v > 0 ? v : null);
+  if (c.house) state.config.house = { area: positive(c.house.area), people: positive(c.house.people) };
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
 }
@@ -122,6 +135,7 @@ export function mergeStates(a, b) {
     prices: merge(a.prices, b.prices),
     offers: merge(a.offers, b.offers),
     upgrades: merge(a.upgrades, b.upgrades),
+    bills: merge(a.bills, b.bills),
     config,
   };
 }
@@ -130,7 +144,7 @@ export function mergeStates(a, b) {
 export function stateText(state) {
   const readings = Object.fromEntries(Object.keys(state.readings).sort().map((key) => [key, state.readings[key]]));
   const sorted = (o = {}) => Object.fromEntries(Object.keys(o).sort().map((id) => [id, o[id]]));
-  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), offers: sorted(state.offers), upgrades: sorted(state.upgrades), config: state.config }, null, 1);
+  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), offers: sorted(state.offers), upgrades: sorted(state.upgrades), bills: sorted(state.bills), config: state.config }, null, 1);
 }
 
 export function setReading(state, { meter, month, value, oldFinal, newStart }, now = Date.now()) {
@@ -147,6 +161,7 @@ export function setConfig(state, changes, now = Date.now()) {
   const config = { ...state.config, ...changes, active: { ...state.config.active, ...changes.active } };
   config.billingEnd = { ...state.config.billingEnd, ...changes.billingEnd };
   config.billingMonths = { ...state.config.billingMonths, ...changes.billingMonths };
+  config.house = { ...state.config.house, ...changes.house };
   return { ...state, config: { ...config, updatedAt: now } };
 }
 
@@ -252,7 +267,7 @@ export function syncSummary(state) {
 export function changedKeys(from, to) {
   const keys = Object.keys(to.readings).filter((k) => JSON.stringify(from?.readings[k]) !== JSON.stringify(to.readings[k]));
   const differ = (name) => Object.keys(to[name] ?? {}).filter((k) => JSON.stringify(from?.[name]?.[k]) !== JSON.stringify(to[name][k]));
-  const suppliers = [...differ("suppliers"), ...differ("prices"), ...differ("offers"), ...differ("upgrades")];
+  const suppliers = [...differ("suppliers"), ...differ("prices"), ...differ("offers"), ...differ("upgrades"), ...differ("bills")];
   const config = JSON.stringify(from?.config) !== JSON.stringify(to.config);
   return { readings: keys.length + suppliers.length, config };
 }
@@ -497,3 +512,28 @@ export const upgradesOf = (state, commodity) =>
 export const kindsAffect = (kinds) => COMMODITIES.filter((c) => kinds.some((k) => UPGRADE_KINDS[k]?.includes(c)));
 // "Doors, Garage door", or the description when there is one.
 export const upgradeKindsLabel = (u, t) => u.kinds.map((k) => t(`upgrade.${k}`)).join(", ");
+
+// A bill as the supplier issued it: the period it covers, what the period cost in all and the result (positive: an
+// overpayment returned; negative: extra to pay), so the app's own estimate can be checked against it.
+export function cleanBill(r, updatedAt) {
+  if (!r.id || !SUPPLIED.includes(r.commodity) || !isMonth(r.from) || !isMonth(r.to) || r.from > r.to) return null;
+  const signed = (v) => (isNumber(v) ? v : null);
+  return { id: String(r.id), commodity: r.commodity, from: r.from, to: r.to, cost: money(r.cost), balance: signed(r.balance), note: text(r.note, 300), updatedAt };
+}
+
+export function setBill(state, fields, now = Date.now()) {
+  const id = fields.id || `b${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const bill = cleanBill({ ...fields, id }, now);
+  if (!bill) throw new Error("invalid-bill");
+  return { ...state, bills: { ...state.bills, [id]: bill } };
+}
+
+export function deleteBill(state, id, now = Date.now()) {
+  return { ...state, bills: { ...state.bills, [id]: { id, deleted: true, updatedAt: now } } };
+}
+
+// Newest first.
+export const billsOf = (state, commodity) =>
+  Object.values(state.bills ?? {})
+    .filter((b) => !b.deleted && b.commodity === commodity)
+    .sort((a, b) => b.to.localeCompare(a.to));
