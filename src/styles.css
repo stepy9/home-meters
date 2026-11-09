@@ -69,11 +69,6 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 .topbar h1 { margin: 0; font-size: 22px; font-weight: 700; }
-.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.sync-dot.ok { background: var(--good); }
-.sync-dot.busy { background: var(--accent); animation: pulse 1s infinite alternate; }
-.sync-dot.error { background: var(--danger); }
-@keyframes pulse { to { opacity: 0.3; } }
 
 main {
   max-width: 760px;

@@ -103,10 +103,6 @@ document.getElementById("theme-switch").addEventListener("click", (event) => {
   render();
 });
 
-function showSync(s) {
-  const dot = document.getElementById("sync-dot");
-  dot.hidden = !s.connected;
-  dot.className = `sync-dot ${s.state === "syncing" ? "busy" : s.error ? "error" : "ok"}`;
   dot.title = s.error ?? "";
   if (currentTab() === "settings") render();
 }
