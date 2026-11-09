@@ -25,11 +25,9 @@ const charts = [];
 const destroyCharts = () => charts.splice(0).forEach((c) => c.destroy());
 
 const commodityColor = { electricity: "--electricity", gas: "--gas", water: "--water" };
-// Years in the comparison: the newest in the commodity's color, older ones fading through a fixed set.
-const yearColors = ["--accent", "--muted", "--electricity-2", "--water", "--danger", "--good"];
+// Years by how recent they are: blue, orange, green, magenta, gold, teal, so the newest few always contrast most.
 const yearColor = (years, year) => {
-  const i = years.indexOf(year);
-  return cssVar(i === 0 ? commodityColor[ui.commodity] : yearColors[(i - 1) % yearColors.length]);
+  return cssVar(`--year-${years.indexOf(year) % 6}`);
 };
 
 const unitOf = () => (ui.commodity === "electricity" ? "kWh" : ui.commodity === "gas" && ui.gasInKwh ? "kWh" : "m³");
@@ -83,8 +81,10 @@ function compareChart(canvas, years, table) {
           data: table.get(year).map((cell) => cell?.total ?? null),
           borderColor: yearColor(years, year),
           backgroundColor: yearColor(years, year),
-          borderWidth: year === years[0] ? 3 : 2,
-          pointRadius: 3,
+          borderWidth: year === years[0] ? 3.5 : 2,
+          // Years older than the two newest are dashed, so lines that cross stay apart.
+          borderDash: years.indexOf(year) >= 2 ? [6, 4] : [],
+          pointRadius: year === years[0] ? 4 : 3,
           tension: 0.25,
           spanGaps: false,
         })),

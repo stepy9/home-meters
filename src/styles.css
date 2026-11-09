@@ -12,6 +12,12 @@
   --electricity-2: #7c3aed;
   --gas: #2563eb;
   --water: #0891b2;
+  --year-0: #2563eb;
+  --year-1: #ea580c;
+  --year-2: #16a34a;
+  --year-3: #c026d3;
+  --year-4: #0d9488;
+  --year-5: #a16207;
   --radius: 14px;
   --tabbar-h: 56px;
   color-scheme: light;
@@ -30,6 +36,12 @@
   --electricity-2: #a78bfa;
   --gas: #60a5fa;
   --water: #22d3ee;
+  --year-0: #60a5fa;
+  --year-1: #fb923c;
+  --year-2: #4ade80;
+  --year-3: #e879f9;
+  --year-4: #2dd4bf;
+  --year-5: #facc15;
 }
 
 * { box-sizing: border-box; }
