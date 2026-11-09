@@ -447,6 +447,8 @@ export const UPGRADE_KINDS = {
   insulation: ["gas"],
   windows: ["gas"],
   roofWindows: ["gas"],
+  doors: ["gas"],
+  garageDoor: [],
   boiler: ["gas"],
   heatPump: ["gas", "electricity"],
   solar: ["electricity"],
