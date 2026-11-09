@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f7f9" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -12,12 +11,23 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <script>try{var t=localStorage.getItem("home-meters-theme");document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch(e){}</script>
     <title>Měřáky</title>
   </head>
   <body>
     <header class="topbar">
       <h1 id="title">Měřáky</h1>
       <span id="sync-dot" class="sync-dot" hidden></span>
+      <div class="topbar-controls">
+        <div class="mini-switch" role="group" id="lang-switch">
+          <button type="button" data-lang="cs">CS</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <div class="mini-switch" role="group" id="theme-switch">
+          <button type="button" data-theme-choice="light"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
+          <button type="button" data-theme-choice="dark"><svg viewBox="0 0 24 24"><path d="M20.1 15.2A8.5 8.5 0 0 1 8.8 3.9 8.6 8.6 0 1 0 20.1 15.2Z"/></svg></button>
+        </div>
+      </div>
     </header>
     <main id="view"></main>
     <nav class="tabbar" id="tabbar"></nav>

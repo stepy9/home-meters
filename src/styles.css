@@ -14,23 +14,22 @@
   --water: #0891b2;
   --radius: 14px;
   --tabbar-h: 56px;
-  color-scheme: light dark;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121417;
-    --surface: #1c1f24;
-    --text: #eceef2;
-    --muted: #9aa1ad;
-    --border: #2c3038;
-    --accent: #60a5fa;
-    --danger: #fb923c;
-    --good: #4ade80;
-    --electricity: #fbbf24;
-    --electricity-2: #a78bfa;
-    --gas: #60a5fa;
-    --water: #22d3ee;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121417;
+  --surface: #1c1f24;
+  --text: #eceef2;
+  --muted: #9aa1ad;
+  --border: #2c3038;
+  --accent: #60a5fa;
+  --danger: #fb923c;
+  --good: #4ade80;
+  --electricity: #fbbf24;
+  --electricity-2: #a78bfa;
+  --gas: #60a5fa;
+  --water: #22d3ee;
 }
 
 * { box-sizing: border-box; }
@@ -226,3 +225,13 @@ td small { display: block; font-size: 11px; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .empty { color: var(--muted); text-align: center; padding: 24px 8px; }
 .version { color: var(--muted); font-size: 12px; text-align: center; }
+
+.topbar h1 { flex: 1; }
+.topbar-controls { display: flex; gap: 6px; }
+.mini-switch { display: flex; background: var(--border); border-radius: 10px; padding: 2px; gap: 2px; }
+.mini-switch button {
+  min-width: 40px; min-height: 36px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--muted); font-weight: 700; font-size: 13px; display: grid; place-items: center;
+}
+.mini-switch button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.15); }
+.mini-switch svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }

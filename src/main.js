@@ -16,6 +16,7 @@ const currentTab = () => (location.hash.slice(1) in tabs ? location.hash.slice(1
 
 function render() {
   const tab = currentTab();
+  renderControls();
   document.title = t("appName");
   document.getElementById("title").textContent = t("appName");
   document.getElementById("tabbar").innerHTML = Object.entries(tabs)
@@ -26,6 +27,49 @@ function render() {
   else if (tab === "overview") renderOverview(view);
   else renderSettings(view, render);
 }
+
+// Light or dark: picked here and kept, or the system's until picked (also set before paint in index.html).
+const themeKey = "home-meters-theme";
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const savedTheme = () => {
+  try {
+    return localStorage.getItem(themeKey);
+  } catch {
+    return null;
+  }
+};
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#121417" : "#f6f7f9";
+}
+
+function renderControls() {
+  const theme = document.documentElement.dataset.theme;
+  document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  document.querySelectorAll("[data-theme-choice]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.themeChoice === theme));
+    const label = t(b.dataset.themeChoice === "dark" ? "darkMode" : "lightMode");
+    b.title = label;
+    b.setAttribute("aria-label", label);
+  });
+  document.getElementById("lang-switch").setAttribute("aria-label", t("language"));
+}
+
+document.getElementById("lang-switch").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lang]");
+  if (!button || button.dataset.lang === lang) return;
+  setLang(button.dataset.lang);
+  render();
+});
+document.getElementById("theme-switch").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-theme-choice]");
+  if (!button) return;
+  try {
+    localStorage.setItem(themeKey, button.dataset.themeChoice);
+  } catch {}
+  applyTheme(button.dataset.themeChoice);
+  render();
+});
 
 function showSync(s) {
   const dot = document.getElementById("sync-dot");
@@ -44,7 +88,12 @@ window.addEventListener("hashchange", () => {
 window.addEventListener("data-change", () => {
   if (!["INPUT", "SELECT"].includes(document.activeElement?.tagName)) render();
 });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+systemDark.addEventListener("change", () => {
+  if (savedTheme()) return;
+  applyTheme(systemDark.matches ? "dark" : "light");
+  render();
+});
+applyTheme(savedTheme() ?? (systemDark.matches ? "dark" : "light"));
 onCloudStatus(showSync);
 render();
 showSync(cloudStatus());

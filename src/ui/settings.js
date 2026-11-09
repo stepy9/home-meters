@@ -1,6 +1,6 @@
 import { METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
-import { fmtTime, lang, setLang, t } from "../i18n.js";
+import { fmtTime, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, parseNumber, toast } from "./dom.js";
 
@@ -30,10 +30,6 @@ export function renderSettings(view, rerender) {
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
     <section class="card">
-      <h2>${esc(t("language"))}</h2>
-      <div class="segmented">${["cs", "en"].map((l) => `<button type="button" data-lang="${l}" aria-pressed="${l === lang}">${l === "cs" ? "Čeština" : "English"}</button>`).join("")}</div>
-    </section>
-    <section class="card">
       <h2>${esc(t("backup"))}</h2>
       <div class="btn-row">
         <button class="btn" id="export">${esc(t("exportJson"))}</button>
@@ -57,12 +53,6 @@ export function renderSettings(view, rerender) {
     if (value > 0) update((s) => setConfig(s, { gasKwhFactor: value }));
     else event.target.value = getState().config.gasKwhFactor;
   });
-  view.querySelectorAll("[data-lang]").forEach((b) =>
-    b.addEventListener("click", () => {
-      setLang(b.dataset.lang);
-      rerender();
-    }),
-  );
   view.querySelector("#export").addEventListener("click", () => {
     const blob = new Blob([stateText(getState())], { type: "application/json" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.json` });
