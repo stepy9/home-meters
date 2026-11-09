@@ -15,6 +15,23 @@ const tabs = { entry: "tabEntry", overview: "tabOverview", settings: "tabSetting
 const view = document.getElementById("view");
 const currentTab = () => (location.hash.slice(1) in tabs ? location.hash.slice(1) : "entry");
 
+const draftKey = (el) => `${el.form?.id ?? ""}|${el.name || el.id}|${el.type === "checkbox" ? el.value : ""}`;
+const draftFields = () => [...view.querySelectorAll("form input, form select, form textarea")].filter((el) => el.type !== "file" && (el.name || el.id));
+function readDrafts() {
+  return new Map(draftFields().map((el) => [draftKey(el), el.type === "checkbox" || el.type === "radio" ? el.checked : el.value]));
+}
+function writeDrafts(drafts) {
+  for (const el of draftFields()) {
+    const key = draftKey(el);
+    if (!drafts.has(key)) continue;
+    const value = drafts.get(key);
+    if (el.type === "checkbox" || el.type === "radio") el.checked = value;
+    else el.value = value;
+    // Let the form react (two-tariff fields, water fields…) as if typed.
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
 function render() {
   const tab = currentTab();
   renderControls();
@@ -23,6 +40,9 @@ function render() {
   document.getElementById("tabbar").innerHTML = Object.entries(tabs)
     .map(([id, key]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ""}>${icons[id]}<span>${t(key)}</span></a>`)
     .join("");
+  // What is typed in an open form survives a redraw (after a sync on coming back to the app, say): the values
+  // are read before and put back into the same fields after, as long as the form is still open.
+  const drafts = tab !== "entry" && view.dataset.tab === tab ? readDrafts() : null;
   view.dataset.tab = tab;
   if (tab !== "overview") leaveOverview();
   // A screen that fails to draw says so instead of staying blank.
@@ -30,6 +50,7 @@ function render() {
     if (tab === "entry") renderEntry(view);
     else if (tab === "overview") renderOverview(view);
     else renderSettings(view, render);
+    if (drafts) writeDrafts(drafts);
   } catch (error) {
     console.error(error);
     view.innerHTML = `<section class="card"><h2>${t("renderError")}</h2><pre class="error-detail"></pre></section>`;
