@@ -108,7 +108,7 @@ export function drawHousehold(view, charts, row, rerender) {
       type: "bar",
       data: {
         labels: t("months"),
-        datasets: SUPPLIED.map((c) => ({ label: t(c), data: row.map((cell) => cell?.parts[c] ?? null), backgroundColor: color(c), borderRadius: 3, stack: "s" })),
+        datasets: SUPPLIED.filter((c) => row.some((cell) => cell?.parts[c] != null)).map((c) => ({ label: t(c), data: row.map((cell) => cell?.parts[c] ?? null), backgroundColor: color(c), borderRadius: 3, stack: "s" })),
       },
       options: {
         maintainAspectRatio: false,
