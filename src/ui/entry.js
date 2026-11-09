@@ -1,7 +1,7 @@
 import { METERS, deleteReading, monthAdd, readingAt, readingBefore, readingsOf, setReading, usedBetween } from "../data.js";
 import { fmt, fmtMonth, t, unitLabel } from "../i18n.js";
 import { getState, update } from "../store.js";
-import { bindBulk, bulkHtml } from "./bulk.js";
+import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
 import { cssVar, esc, parseNumber, toast } from "./dom.js";
 
 const colorVar = { "el-vt": "--electricity", "el-nt": "--electricity-2", gas: "--gas", water: "--water" };
@@ -87,13 +87,15 @@ export function renderEntry(view) {
         <p class="hint">${esc(t("entryHint"))}</p>
       </section>
       ${meters.map((m) => meterCard(state, m)).join("")}
-      <button class="btn primary" type="submit">${esc(t("save"))}</button>
-      ${hasAny ? `<div class="btn-row"><button class="btn danger" type="button" id="delete-month">${esc(t("delete"))} ${esc(fmtMonth(month))}</button></div>` : ""}
+      <div class="form-actions">
+        ${hasAny ? `<button class="btn danger icon-btn" type="button" id="delete-month" title="${esc(t("delete"))} ${esc(fmtMonth(month))}" aria-label="${esc(t("delete"))} ${esc(fmtMonth(month))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ""}
+        <button class="btn primary" type="submit">${esc(t("save"))} ${esc(fmtMonth(month))}</button>
+      </div>
     </form>
-    ${bulkHtml()}
+    ${bulkEnabled() ? bulkHtml() : ""}
     ${historyHtml(state)}`;
 
-  bindBulk(view);
+  if (bulkEnabled()) bindBulk(view);
   const form = view.querySelector("#entry-form");
   form.querySelectorAll("[data-meter]").forEach(refreshCard);
   form.addEventListener("input", (event) => {

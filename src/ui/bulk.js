@@ -4,6 +4,22 @@ import { fmt, fmtMonth, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, toast } from "./dom.js";
 
+// Shown on the entry screen only when switched on in the settings (per device; it is for catching up on history).
+const enabledKey = "home-meters-bulk";
+export const bulkEnabled = () => {
+  try {
+    return localStorage.getItem(enabledKey) === "1";
+  } catch {
+    return false;
+  }
+};
+export const setBulkEnabled = (on) => {
+  try {
+    if (on) localStorage.setItem(enabledKey, "1");
+    else localStorage.removeItem(enabledKey);
+  } catch {}
+};
+
 // Kept while the app is open, so switching tabs does not lose a paste.
 const ui = { open: false, text: "", columns: null, header: false, earlyToPrevious: true };
 

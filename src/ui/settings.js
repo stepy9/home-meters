@@ -2,6 +2,7 @@ import { METERS, mergeStates, normalizeState, setConfig, stateText } from "../da
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
 import { fmtMonth, fmtTime, t } from "../i18n.js";
 import { getState, update } from "../store.js";
+import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { esc, parseNumber, toast } from "./dom.js";
 
 function cloudHtml() {
@@ -56,6 +57,11 @@ export function renderSettings(view, rerender) {
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
     <section class="card">
+      <h2>${esc(t("entrySettings"))}</h2>
+      <label class="check"><input type="checkbox" id="bulk-enabled" ${bulkEnabled() ? "checked" : ""} />${esc(t("bulkEnabled"))}</label>
+      <p class="hint">${esc(t("bulkEnabledHint"))}</p>
+    </section>
+    <section class="card">
       <h2>${esc(t("backup"))}</h2>
       <div class="btn-row">
         <button class="btn" id="export">${esc(t("exportJson"))}</button>
@@ -79,6 +85,7 @@ export function renderSettings(view, rerender) {
     if (value > 0) update((s) => setConfig(s, { gasKwhFactor: value }));
     else event.target.value = getState().config.gasKwhFactor;
   });
+  view.querySelector("#bulk-enabled").addEventListener("change", (event) => setBulkEnabled(event.target.checked));
   view.querySelector("#export").addEventListener("click", () => {
     const blob = new Blob([stateText(getState())], { type: "application/json" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.json` });
