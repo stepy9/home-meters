@@ -36,6 +36,9 @@ function summaryHtml(summary) {
   return `<ul class="cloud-items">${list}</ul><p class="hint">${esc(movedLine)}</p>`;
 }
 
+// Set by Vite from vite.config.js; a dev server started without it still shows the page.
+const appVersion = typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__;
+
 export function renderSettings(view, rerender) {
   const state = getState();
   view.innerHTML = `
@@ -60,7 +63,7 @@ export function renderSettings(view, rerender) {
         <input type="file" id="import" accept="application/json,.json" hidden />
       </div>
     </section>
-    <p class="version">${esc(t("version"))} ${esc(__APP_VERSION__)}</p>`;
+    <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>`;
 
   view.querySelector("#connect")?.addEventListener("click", connectCloud);
   view.querySelector("#sync")?.addEventListener("click", syncNow);

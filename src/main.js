@@ -23,9 +23,18 @@ function render() {
     .map(([id, key]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ""}>${icons[id]}<span>${t(key)}</span></a>`)
     .join("");
   if (tab !== "overview") leaveOverview();
-  if (tab === "entry") renderEntry(view);
-  else if (tab === "overview") renderOverview(view);
-  else renderSettings(view, render);
+  // A screen that fails to draw says so instead of staying blank.
+  try {
+    if (tab === "entry") renderEntry(view);
+    else if (tab === "overview") renderOverview(view);
+    else renderSettings(view, render);
+  } catch (error) {
+    console.error(error);
+    view.innerHTML = `<section class="card"><h2>${t("renderError")}</h2><pre class="error-detail"></pre></section>`;
+    view.querySelector(".error-detail").textContent = `${error?.message}
+
+${error?.stack ?? ""}`;
+  }
 }
 
 // Light or dark: picked here and kept, or the system's until picked (also set before paint in index.html).
