@@ -1,5 +1,5 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
+import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, upgradeKindsLabel, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
 import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
@@ -116,7 +116,7 @@ function yearChart(canvas, state, row) {
     : [];
   // House upgrades in the shown year, in the commodity's color.
   for (const u of upgradesOf(state, ui.commodity).filter((u) => Number(u.month.slice(0, 4)) === ui.year))
-    marks.push({ index: Math.floor((Number(u.month.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: u.name || t(`upgrade.${u.kind}`), color: cssVar(commodityColor[ui.commodity]), after: true });
+    marks.push({ index: Math.floor((Number(u.month.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: u.name || upgradeKindsLabel(u, t), color: cssVar(commodityColor[ui.commodity]), after: true });
   const datasets = split
     ? meters.map((m, i) => ({
         label: t(`short.${m.id}`),

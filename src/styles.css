@@ -424,3 +424,4 @@ select {
   background-size: 12px 8px;
   cursor: pointer;
 }
+.kinds { gap: 0 18px; }

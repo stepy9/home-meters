@@ -14,13 +14,13 @@ const series = (state, meter, start, values) => {
 };
 
 test("upgrades are cleaned, kept through normalize and listed newest first", () => {
-  let s = setUpgrade(emptyState(), { kind: "windows", month: "2025-05", name: "Okna", cost: 200000, subsidy: 50000, affects: ["gas", "bogus"] }, 5);
+  let s = setUpgrade(emptyState(), { kinds: ["windows", "doors"], month: "2025-05", name: "Okna", cost: 200000, subsidy: 50000, affects: ["gas", "bogus"] }, 5);
   s = setUpgrade(s, { kind: "solar", month: "2026-03", affects: ["electricity"] }, 6);
   const back = normalizeState(JSON.parse(JSON.stringify(s)));
   const list = upgradesOf(back);
-  assert.deepEqual(list.map((u) => u.kind), ["solar", "windows"]);
+  assert.deepEqual(list.map((u) => u.kinds), [["solar"], ["windows", "doors"]]);
   assert.deepEqual(list[1].affects, ["gas"]);
-  assert.deepEqual(upgradesOf(back, "gas").map((u) => u.kind), ["windows"]);
+  assert.deepEqual(upgradesOf(back, "gas").map((u) => u.kinds), [["windows", "doors"]]);
   assert.throws(() => setUpgrade(emptyState(), { kind: "nope", month: "2025-05" }));
 });
 

@@ -459,11 +459,13 @@ export const UPGRADE_KINDS = {
 };
 
 export function cleanUpgrade(r, updatedAt) {
-  if (!r.id || !isMonth(r.month) || !(r.kind in UPGRADE_KINDS)) return null;
+  // Several kinds done together (doors and a garage door); an older record has a single kind.
+  const kinds = Object.keys(UPGRADE_KINDS).filter((k) => (Array.isArray(r.kinds) ? r.kinds : [r.kind]).includes(k));
+  if (!r.id || !isMonth(r.month) || !kinds.length) return null;
   return {
     id: String(r.id),
     month: r.month,
-    kind: r.kind,
+    kinds,
     name: text(r.name, 120),
     cost: money(r.cost),
     subsidy: money(r.subsidy),
@@ -490,3 +492,8 @@ export const upgradesOf = (state, commodity) =>
   Object.values(state.upgrades ?? {})
     .filter((u) => !u.deleted && (!commodity || u.affects.includes(commodity)))
     .sort((a, b) => b.month.localeCompare(a.month) || a.id.localeCompare(b.id));
+
+// The commodities a set of kinds usually affects.
+export const kindsAffect = (kinds) => COMMODITIES.filter((c) => kinds.some((k) => UPGRADE_KINDS[k]?.includes(c)));
+// "Doors, Garage door", or the description when there is one.
+export const upgradeKindsLabel = (u, t) => u.kinds.map((k) => t(`upgrade.${k}`)).join(", ");

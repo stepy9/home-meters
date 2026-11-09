@@ -1,4 +1,4 @@
-import { COMMODITIES, UPGRADE_KINDS, deleteUpgrade, setUpgrade, upgradesOf } from "../data.js";
+import { COMMODITIES, UPGRADE_KINDS, deleteUpgrade, kindsAffect, setUpgrade, upgradeKindsLabel, upgradesOf } from "../data.js";
 import { fmt, fmtMonth, fmtPct, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { upgradeImpact, upgradePayback } from "../upgrades.js";
@@ -25,13 +25,13 @@ function formHtml(u) {
   const month = u?.month ?? currentMonth();
   const year = Number(currentMonth().slice(0, 4));
   const years = Array.from({ length: 41 }, (_, i) => year + 1 - i);
-  const kind = u?.kind ?? "insulation";
-  const affects = u?.affects ?? UPGRADE_KINDS[kind];
+  const kinds = u?.kinds ?? [];
+  const affects = u?.affects ?? kindsAffect(kinds);
   return `
     <form class="price-form" id="upgrade-form" novalidate>
       <h4 class="price-title">${esc(t(u ? "upgradeEdit" : "upgradeAdd"))}</h4>
-      <label class="field" for="up-kind">${esc(t("upgradeKind"))}</label>
-      <select id="up-kind" name="kind">${options(Object.keys(UPGRADE_KINDS), kind, (k) => t(`upgrade.${k}`))}</select>
+      <label class="field">${esc(t("upgradeKinds"))}</label>
+      <div class="checks kinds">${Object.keys(UPGRADE_KINDS).map((k) => `<label class="check"><input type="checkbox" name="kinds" value="${k}" ${kinds.includes(k) ? "checked" : ""} />${esc(t(`upgrade.${k}`))}</label>`).join("")}</div>
       <label class="field">${esc(t("upgradeWhen"))}</label>
       <div class="two-cols">
         <select name="month" aria-label="${esc(t("month"))}">${options(Array.from({ length: 12 }, (_, i) => pad(i + 1)), month.slice(5), (v) => t("monthsLong")[Number(v) - 1])}</select>
@@ -56,7 +56,7 @@ function formHtml(u) {
     </form>`;
 }
 
-const title = (u) => u.name || t(`upgrade.${u.kind}`);
+const title = (u) => u.name || upgradeKindsLabel(u, t);
 const moneyText = (u) =>
   [u.cost != null && `${t("upgradeCost")} ${kc(u.cost)}`, u.subsidy && `${t("upgradeSubsidy").toLowerCase()} ${kc(u.subsidy)}`].filter(Boolean).join(", ");
 
@@ -66,7 +66,7 @@ export function upgradesSettingsHtml() {
     .map(
       (u) => `
       <div class="offer-row">
-        <div class="offer-main"><strong>${esc(title(u))}</strong><div class="hint">${esc([fmtMonth(u.month), u.name && u.name !== t(`upgrade.${u.kind}`) && t(`upgrade.${u.kind}`), moneyText(u), u.company, u.note].filter(Boolean).join(" · "))}</div></div>
+        <div class="offer-main"><strong>${esc(title(u))}</strong><div class="hint">${esc([fmtMonth(u.month), u.name && u.name !== upgradeKindsLabel(u, t) && upgradeKindsLabel(u, t), moneyText(u), u.company, u.note].filter(Boolean).join(" · "))}</div></div>
         <div class="upgrade-icons">${u.affects.map((c) => `<span style="color:var(--${c})">${commodityIcon(c)}</span>`).join("")}</div>
         <button type="button" class="mp-link" data-edit-upgrade="${esc(u.id)}">${esc(t("edit"))}</button>
       </div>`,
@@ -97,9 +97,13 @@ export function bindUpgrades(root, rerender) {
   let touched = Boolean(editing);
   const boxes = form.querySelectorAll('[name="affects"]');
   boxes.forEach((box) => box.addEventListener("change", () => (touched = true)));
-  form.querySelector("#up-kind").addEventListener("change", (e) => {
-    if (!touched) boxes.forEach((box) => (box.checked = UPGRADE_KINDS[e.target.value].includes(box.value)));
-  });
+  form.querySelectorAll('[name="kinds"]').forEach((k) =>
+    k.addEventListener("change", () => {
+      if (touched) return;
+      const affects = kindsAffect([...form.querySelectorAll('[name="kinds"]:checked')].map((x) => x.value));
+      boxes.forEach((box) => (box.checked = affects.includes(box.value)));
+    }),
+  );
   form.querySelector("#up-cancel").addEventListener("click", () => {
     editing = null;
     rerender();
@@ -114,15 +118,16 @@ export function bindUpgrades(root, rerender) {
     event.preventDefault();
     const data = new FormData(form);
     const values = { cost: parseNumber(data.get("cost")), subsidy: parseNumber(data.get("subsidy")) };
-    if (Object.values(values).some((v) => Number.isNaN(v) || v < 0)) {
-      const error = form.querySelector("#up-error");
-      error.textContent = t("priceInvalid");
+    const error = form.querySelector("#up-error");
+    const show = (key) => {
+      error.textContent = t(key);
       error.hidden = false;
-      return;
-    }
+    };
+    if (!data.getAll("kinds").length) return show("upgradeNeedsKind");
+    if (Object.values(values).some((v) => Number.isNaN(v) || v < 0)) return show("priceInvalid");
     const fields = {
       id: editing || undefined,
-      kind: data.get("kind"),
+      kinds: data.getAll("kinds"),
       month: `${data.get("year")}-${data.get("month")}`,
       name: data.get("name"),
       company: data.get("company"),
