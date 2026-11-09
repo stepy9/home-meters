@@ -1,12 +1,14 @@
 // The data: one reading (the meter's state at the end of a month) per meter and month. Consumption is the
 // difference between two readings; months skipped in between share it evenly. Every record carries the time
 // it was last changed, so two copies (this browser and Dropbox) merge record by record, the newer one winning.
-// Suppliers (electricity and gas) are records of their own, each valid from a month until the next one starts.
+// Suppliers (electricity and gas) are records of their own, each valid from a month until the next one starts,
+// and each supplier has price periods of its own (prices change during a contract too).
 
-// Version 2 added suppliers. An app that only knows version 1 refuses version 2 data instead of syncing it
-// and dropping the suppliers.
+// Version 2 added suppliers and their prices. An app that only knows version 1 refuses version 2 data instead
+// of syncing it and dropping them.
 export const DATA_VERSION = 2;
-export const SUPPLIED = ["electricity", "gas"];
+// Every commodity has a supplier; water usually keeps the same one, electricity and gas can switch.
+export const SUPPLIED = ["electricity", "gas", "water"];
 
 export const METERS = [
   { id: "el-vt", commodity: "electricity", unit: "kWh" },
@@ -22,7 +24,7 @@ export const defaultConfig = () => ({
   gasKwhFactor: 10.6,
   updatedAt: 0,
 });
-export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, config: defaultConfig() });
+export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, config: defaultConfig() });
 
 export const readingKey = (meter, month) => `${meter}|${month}`;
 
@@ -59,6 +61,15 @@ export function normalizeState(raw) {
         if (supplier) state.suppliers[supplier.id] = supplier;
       }
   }
+  for (const [id, r] of Object.entries(raw.prices ?? {})) {
+    if (!r || r.id !== id) continue;
+    const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
+    if (r.deleted) state.prices[id] = { id, deleted: true, updatedAt };
+    else {
+      const price = cleanPrice(r, updatedAt);
+      if (price) state.prices[id] = price;
+    }
+  }
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
@@ -69,19 +80,27 @@ export function normalizeState(raw) {
 export function mergeStates(a, b) {
   if (!b) return a;
   if (!a) return b;
-  const readings = { ...a.readings };
-  for (const [key, r] of Object.entries(b.readings)) if (!readings[key] || r.updatedAt > readings[key].updatedAt) readings[key] = r;
-  const suppliers = { ...a.suppliers };
-  for (const [id, r] of Object.entries(b.suppliers ?? {})) if (!suppliers[id] || r.updatedAt > suppliers[id].updatedAt) suppliers[id] = r;
+  // Each collection record by record, the newer change winning (a deletion is a change too).
+  const merge = (x = {}, y = {}) => {
+    const out = { ...x };
+    for (const [key, r] of Object.entries(y)) if (!out[key] || r.updatedAt > out[key].updatedAt) out[key] = r;
+    return out;
+  };
   const config = b.config.updatedAt > a.config.updatedAt ? b.config : a.config;
-  return { version: DATA_VERSION, readings, suppliers, config };
+  return {
+    version: DATA_VERSION,
+    readings: merge(a.readings, b.readings),
+    suppliers: merge(a.suppliers, b.suppliers),
+    prices: merge(a.prices, b.prices),
+    config,
+  };
 }
 
 // The same state always gives the same text, so comparing texts tells whether anything changed.
 export function stateText(state) {
   const readings = Object.fromEntries(Object.keys(state.readings).sort().map((key) => [key, state.readings[key]]));
-  const suppliers = Object.fromEntries(Object.keys(state.suppliers ?? {}).sort().map((id) => [id, state.suppliers[id]]));
-  return JSON.stringify({ version: DATA_VERSION, readings, suppliers, config: state.config }, null, 1);
+  const sorted = (o = {}) => Object.fromEntries(Object.keys(o).sort().map((id) => [id, o[id]]));
+  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), config: state.config }, null, 1);
 }
 
 export function setReading(state, { meter, month, value, oldFinal, newStart }, now = Date.now()) {
@@ -175,13 +194,15 @@ export function syncSummary(state) {
       return [m.id, { count: list.length, last: list.at(-1)?.month ?? null }];
     }),
   );
-  return { meters, suppliers: Object.values(state.suppliers ?? {}).filter((x) => !x.deleted).length, config: state.config.updatedAt > 0 };
+  const live = (o = {}) => Object.values(o).filter((x) => !x.deleted).length;
+  return { meters, suppliers: live(state.suppliers), prices: live(state.prices), config: state.config.updatedAt > 0 };
 }
 
 // Keys of records that differ between two states (what one has to take from the other), and whether the config does.
 export function changedKeys(from, to) {
   const keys = Object.keys(to.readings).filter((k) => JSON.stringify(from?.readings[k]) !== JSON.stringify(to.readings[k]));
-  const suppliers = Object.keys(to.suppliers ?? {}).filter((k) => JSON.stringify(from?.suppliers?.[k]) !== JSON.stringify(to.suppliers[k]));
+  const differ = (name) => Object.keys(to[name] ?? {}).filter((k) => JSON.stringify(from?.[name]?.[k]) !== JSON.stringify(to[name][k]));
+  const suppliers = [...differ("suppliers"), ...differ("prices")];
   const config = JSON.stringify(from?.config) !== JSON.stringify(to.config);
   return { readings: keys.length + suppliers.length, config };
 }
@@ -242,3 +263,65 @@ export function daysUntil(date, today = new Date()) {
   return Math.round((Date.UTC(y, m - 1, d) - start) / 86400000);
 }
 export const CONTRACT_WARN_DAYS = 60;
+
+// Distribution rates (electricity): one-tariff D01d/D02d, the rest have a low tariff (NT) for some hours a day.
+export const TARIFFS = [
+  { id: "D01d", twoTariff: false },
+  { id: "D02d", twoTariff: false },
+  { id: "D25d", twoTariff: true },
+  { id: "D26d", twoTariff: true },
+  { id: "D27d", twoTariff: true },
+  { id: "D35d", twoTariff: true },
+  { id: "D45d", twoTariff: true },
+  { id: "D56d", twoTariff: true },
+  { id: "D57d", twoTariff: true },
+  { id: "D61d", twoTariff: true },
+];
+export const isTwoTariff = (id) => TARIFFS.find((x) => x.id === id)?.twoTariff ?? false;
+
+const money = (value) => (isNumber(value) && value >= 0 ? value : null);
+
+// A price period of a supplier, valid from its month until the supplier's next one: the price with VAT per kWh
+// (electricity: high tariff, and low tariff with a two-tariff rate; gas per kWh too) or per m³ for water (water
+// and sewage charge), the fixed monthly fees, and the monthly advance paid. Prices may be missing (null) when only part is known.
+export function cleanPrice(r, updatedAt) {
+  if (!r.id || !r.supplierId || !isMonth(r.from)) return null;
+  const tariff = TARIFFS.some((x) => x.id === r.tariff) ? r.tariff : "";
+  return {
+    id: String(r.id),
+    supplierId: String(r.supplierId),
+    from: r.from,
+    tariff,
+    unit: money(r.unit),
+    unitNt: isTwoTariff(tariff) ? money(r.unitNt) : null,
+    // Water: the sewage charge (stočné) per m³ beside the water charge (vodné) in unit.
+    unitSewer: money(r.unitSewer),
+    monthly: money(r.monthly),
+    advance: money(r.advance),
+    updatedAt,
+  };
+}
+
+export function setPrice(state, fields, now = Date.now()) {
+  const id = fields.id || `p${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const price = cleanPrice({ ...fields, id }, now);
+  if (!price) throw new Error("invalid-price");
+  return { ...state, prices: { ...state.prices, [id]: price } };
+}
+
+export function deletePrice(state, id, now = Date.now()) {
+  return { ...state, prices: { ...state.prices, [id]: { id, deleted: true, updatedAt: now } } };
+}
+
+// A supplier's price periods, oldest first.
+export const pricesOf = (state, supplierId) =>
+  Object.values(state.prices ?? {})
+    .filter((p) => !p.deleted && p.supplierId === supplierId)
+    .sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
+
+// The price that applied to a commodity in a month: the supplier then, and its latest period started by then.
+export function priceAt(state, commodity, month) {
+  const supplier = supplierAt(state, commodity, month);
+  if (!supplier) return null;
+  return pricesOf(state, supplier.id).filter((p) => p.from <= month).at(-1) ?? null;
+}

@@ -17,11 +17,12 @@ test("a supplier covers its commodity from its month until the next one", () => 
   assert.equal(supplierAt(s, "gas", "2026-03").product, "Plyn Fix");
   assert.deepEqual(suppliersOf(s, "electricity").map((x) => x.id), ["a", "b"]);
   assert.deepEqual(suppliersOf(s, "water"), []);
+  assert.ok(setSupplier(emptyState(), { name: "PVK", commodity: "water", from: "2020-01" }));
 });
 
 test("invalid suppliers are refused", () => {
   assert.throws(() => setSupplier(emptyState(), { name: "", commodity: "gas", from: "2024-01" }));
-  assert.throws(() => setSupplier(emptyState(), { name: "X", commodity: "water", from: "2024-01" }));
+  assert.throws(() => setSupplier(emptyState(), { name: "X", commodity: "heat", from: "2024-01" }));
   assert.throws(() => setSupplier(emptyState(), { name: "X", commodity: "gas", from: "2024" }));
 });
 

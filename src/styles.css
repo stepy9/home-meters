@@ -353,3 +353,16 @@ input[type="date"] { width: 100%; min-height: 44px; font-size: 17px; padding: 8p
 .supplier-group { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
 .supplier-group-title { display: flex; align-items: center; gap: 8px; font-size: 16px; margin: 0 0 4px; }
 .three-cols { display: grid; grid-template-columns: 0.8fr 1.5fr 1fr; gap: 8px; }
+.view-row { display: flex; gap: 8px; }
+.view-row .segmented { flex: 1; }
+.hint.center { text-align: center; }
+.hint.center a, .supplier-card a { color: var(--accent); font-weight: 600; }
+.price-now { margin-top: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.link-btn { display: inline-block; margin-top: 6px; padding: 6px 0; min-height: 32px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14px; }
+.price-list { margin-top: 4px; padding: 8px 12px; border-radius: 12px; background: var(--bg); }
+.price-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.price-row .hint { margin: 2px 0 0; }
+.price-title { margin: 12px 0 0; font-size: 15px; }
+.price-form .meter-input input { background: var(--surface); }
+.price-form select { background: var(--surface); }
+.btn.small { min-height: 38px; padding: 6px 12px; margin-top: 8px; font-size: 14px; }
