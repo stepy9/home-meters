@@ -1,5 +1,5 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { COMMODITIES, SUPPLIED, priceAt, supplierAt, suppliersOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
+import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
 import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
@@ -19,10 +19,13 @@ const saved = (() => {
   }
 })();
 // money: costs in Kč instead of consumption.
-const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, money: saved.money ?? false, year: null, compared: null };
+// quarters: charts and table by quarter instead of by month.
+const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null };
+const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
+const periodLabels = () => (ui.quarters ? QUARTERS : t("months"));
 const remember = () => {
   try {
-    localStorage.setItem(viewKey, JSON.stringify({ commodity: ui.commodity, gasInKwh: ui.gasInKwh, money: ui.money }));
+    localStorage.setItem(viewKey, JSON.stringify({ commodity: ui.commodity, gasInKwh: ui.gasInKwh, money: ui.money, quarters: ui.quarters }));
   } catch {}
 };
 
@@ -87,7 +90,7 @@ function yearChart(canvas, state, row) {
     ? suppliersOf(state, ui.commodity)
         .slice(1)
         .filter((s) => Number(s.from.slice(0, 4)) === ui.year)
-        .map((s) => ({ index: Number(s.from.slice(5)) - 1, name: s.name }))
+        .map((s) => ({ index: Math.floor((Number(s.from.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: s.name }))
     : [];
   const datasets = split
     ? meters.map((m, i) => ({
@@ -101,7 +104,7 @@ function yearChart(canvas, state, row) {
   charts.push(
     new Chart(canvas, {
       type: "bar",
-      data: { labels: t("months"), datasets },
+      data: { labels: periodLabels(), datasets },
       options: {
         maintainAspectRatio: false,
         scales: { ...axis(), x: { stacked: split, grid: { display: false } }, y: { ...axis().y, stacked: split } },
@@ -119,7 +122,7 @@ function compareChart(canvas, years, table) {
     new Chart(canvas, {
       type: "line",
       data: {
-        labels: t("months"),
+        labels: periodLabels(),
         datasets: shown.map((year) => ({
           label: String(year),
           data: table.get(year).map((cell) => cell?.total ?? null),
@@ -150,11 +153,16 @@ function tableHtml(years, table) {
     const cur = row[i];
     if (!cur) return "<td>–</td>";
     const prevYear = table.get(y - 1);
-    const delta = prevYear ? change(cur, prevYear[i]) : null;
+    const prev = prevYear?.[i];
+    // Quarters compare only when both cover the same number of months (a running quarter would look far lower).
+    const comparable = prev && (cur.months ?? 3) === (prev.months ?? 3);
+    const delta = comparable ? change(cur, prev) : null;
     const deltaHtml = delta == null ? "" : `<small class="${delta > 0 ? "up" : "down"}">${fmtPct(delta)}</small>`;
-    return `<td>${fmtVal(cur.total)}${cur.estimated ? "*" : ""}${deltaHtml}</td>`;
+    // A quarter not yet complete says how many of its months are in.
+    const partial = cur.months != null && cur.months < 3 ? ` <small class="muted">${cur.months}/3</small>` : "";
+    return `<td>${fmtVal(cur.total)}${cur.estimated ? "*" : ""}${partial}${deltaHtml}</td>`;
   };
-  const rows = t("months")
+  const rows = periodLabels()
     .map((name, i) => `<tr><td>${esc(name)}</td>${cols.map((y) => cell(table.get(y), i, y)).join("")}</tr>`)
     .join("");
   const totals = cols.map((y) => `<td>${fmt(yearTotal(table.get(y)).total, 0)}</td>`).join("");
@@ -231,6 +239,7 @@ export function renderOverview(view) {
     }
   } else consumption = commodityConsumption(state, ui.commodity, { gasInKwh: ui.gasInKwh });
   const { years, table } = byYear(consumption);
+  const shown = ui.quarters ? new Map(years.map((y) => [y, toQuarters(table.get(y))])) : table;
   if (!years.includes(ui.year)) ui.year = years[0] ?? null;
   if (!ui.compared || ![...ui.compared].some((y) => years.includes(y))) ui.compared = new Set(years.slice(0, 3));
 
@@ -240,7 +249,8 @@ export function renderOverview(view) {
     ui.commodity === "gas" && !ui.money
       ? `<div class="segmented">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div>`
       : "";
-  const unitToggle = `<div class="view-row">${moneyToggle}${gasToggle}</div>`;
+  const periodToggle = `<div class="segmented">${[false, true].map((q) => `<button type="button" data-quarters="${q}" aria-pressed="${q === ui.quarters}">${esc(t(q ? "viewQuarters" : "viewMonths"))}</button>`).join("")}</div>`;
+  const unitToggle = `<div class="view-row">${moneyToggle}${periodToggle}</div>${gasToggle ? `<div class="view-row">${gasToggle}</div>` : ""}`;
   const yearChips = (attr, isOn, color) =>
     `<div class="chips">${years.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
@@ -252,7 +262,7 @@ export function renderOverview(view) {
       years.length
         ? `
       <section class="card">
-        <h2>${esc(t(ui.money ? "yearCosts" : "yearChart"))}</h2>
+        <h2>${esc(t(ui.money ? (ui.quarters ? "quarterCosts" : "yearCosts") : ui.quarters ? "quarterChart" : "yearChart"))}</h2>
         ${yearChips("data-year", (y) => y === ui.year, () => cssVar("--text"))}
         ${statsHtml(table, ui.year, state)}
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
@@ -264,15 +274,15 @@ export function renderOverview(view) {
       </section>
       <section class="card">
         <h2>${esc(t("compareTable"))}</h2>
-        ${tableHtml(years, table)}
+        ${tableHtml(years, shown)}
       </section>`
         : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
     }
     ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings">${esc(t("tabSettings"))}</a></p>` : ""}`;
 
   if (years.length) {
-    yearChart(view.querySelector("#year-chart"), state, table.get(ui.year));
-    compareChart(view.querySelector("#compare-chart"), years, table);
+    yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));
+    compareChart(view.querySelector("#compare-chart"), years, shown);
   }
 
   view.querySelectorAll("[data-commodity]").forEach((b) =>
@@ -287,6 +297,13 @@ export function renderOverview(view) {
     b.addEventListener("click", () => {
       ui.money = b.dataset.money === "true";
       ui.compared = null;
+      remember();
+      renderOverview(view);
+    }),
+  );
+  view.querySelectorAll("[data-quarters]").forEach((b) =>
+    b.addEventListener("click", () => {
+      ui.quarters = b.dataset.quarters === "true";
       remember();
       renderOverview(view);
     }),

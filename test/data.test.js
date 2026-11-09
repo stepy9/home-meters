@@ -101,3 +101,15 @@ test("normalizing drops what does not fit and round-trips", () => {
   assert.throws(() => normalizeState({ version: 3 }));
   assert.doesNotThrow(() => normalizeState({ version: 1 }));
 });
+
+test("months sum into quarters, partial ones marked", async () => {
+  const { toQuarters } = await import("../src/data.js");
+  const m = (total, extra = {}) => ({ total, parts: { a: total }, estimated: false, ...extra });
+  const q = toQuarters([m(1), m(2), m(3), m(4), null, m(6, { estimated: true }), null, null, null, m(10), null, null]);
+  assert.deepEqual(q[0], { total: 6, parts: { a: 6 }, estimated: false, months: 3 });
+  assert.equal(q[1].total, 10);
+  assert.equal(q[1].months, 2);
+  assert.equal(q[1].estimated, true);
+  assert.equal(q[2], null);
+  assert.equal(q[3].months, 1);
+});

@@ -177,6 +177,23 @@ export function byYear(consumption) {
   return { years, table };
 }
 
+// Twelve months as four quarters: totals and parts summed over the months known; a quarter with fewer than
+// three months known is partial (months: how many), one with an estimated month is estimated.
+export function toQuarters(months) {
+  return [0, 1, 2, 3].map((q) => {
+    const known = months.slice(q * 3, q * 3 + 3).filter(Boolean);
+    if (!known.length) return null;
+    const parts = {};
+    for (const m of known) for (const [k, v] of Object.entries(m.parts ?? {})) parts[k] = (parts[k] ?? 0) + v;
+    return {
+      total: known.reduce((sum, m) => sum + m.total, 0),
+      parts,
+      estimated: known.some((m) => m.estimated),
+      months: known.length,
+    };
+  });
+}
+
 // The year's total and how many months it covers.
 export const yearTotal = (months) => {
   const known = months.filter(Boolean);
@@ -281,6 +298,11 @@ export const TARIFFS = [
 export const BREAKERS = ["1×10 A", "1×16 A", "1×20 A", "1×25 A", "3×10 A", "3×16 A", "3×20 A", "3×25 A", "3×32 A", "3×40 A", "3×50 A", "3×63 A"];
 export const isTwoTariff = (id) => TARIFFS.find((x) => x.id === id)?.twoTariff ?? false;
 
+// Months in each advance period.
+export const ADVANCE_PERIODS = { month: 1, quarter: 3, year: 12 };
+// The advance as paid per month.
+export const monthlyAdvance = (price) => (price?.advance == null ? null : price.advance / ADVANCE_PERIODS[price.advancePeriod ?? "month"]);
+
 const money = (value) => (isNumber(value) && value >= 0 ? value : null);
 
 // A price period of a supplier, valid from its month until the supplier's next one: the price with VAT per kWh
@@ -301,6 +323,8 @@ export function cleanPrice(r, updatedAt) {
     unitSewer: money(r.unitSewer),
     monthly: money(r.monthly),
     advance: money(r.advance),
+    // How often the advance is paid (water is often billed quarterly or yearly); the amount is per that period.
+    advancePeriod: ADVANCE_PERIODS[r.advancePeriod] ? r.advancePeriod : "month",
     updatedAt,
   };
 }

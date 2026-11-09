@@ -366,3 +366,5 @@ input[type="date"] { width: 100%; min-height: 44px; font-size: 17px; padding: 8p
 .price-form .meter-input input { background: var(--surface); }
 .price-form select { background: var(--surface); }
 .btn.small { min-height: 38px; padding: 6px 12px; margin-top: 8px; font-size: 14px; }
+.view-row + .view-row { margin-top: -4px; }
+small.muted { display: inline; color: var(--muted); font-size: 11px; }

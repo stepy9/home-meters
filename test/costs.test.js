@@ -72,3 +72,13 @@ test("prices are cleaned, merged and round-trip", () => {
   assert.equal(merged.prices.e2.deleted, true);
   assert.equal(stateText(normalizeState(JSON.parse(stateText(merged)))), stateText(merged));
 });
+
+test("a quarterly or yearly advance counts per month", () => {
+  let s = home();
+  s = setPrice(s, { id: "w1", supplierId: "wt", from: "2020-01", unit: 60, unitSewer: 50, advance: 1800, advancePeriod: "quarter" }, 4);
+  const b = advanceBalance(s, "water", 2026);
+  close(b.paid, 2 * 600);
+  s = setPrice(s, { id: "w1", supplierId: "wt", from: "2020-01", unit: 60, advance: 7200, advancePeriod: "year" }, 5);
+  close(advanceBalance(s, "water", 2026).paid, 2 * 600);
+  assert.equal(setPrice(s, { id: "w1", supplierId: "wt", from: "2020-01", advancePeriod: "week" }).prices.w1.advancePeriod, "month");
+});

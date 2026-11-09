@@ -1,5 +1,6 @@
 import {
   CONTRACT_WARN_DAYS,
+  ADVANCE_PERIODS,
   BREAKERS,
   SUPPLIED,
   TARIFFS,
@@ -59,7 +60,7 @@ export function priceSummary(commodity, p) {
     if (p.unit != null || p.unitSewer != null) parts[parts.length - 1] += "/m³";
   }
   if (p.monthly != null) parts.push(`${kc(p.monthly, 0)}${t("perMonthShort")}`);
-  if (p.advance != null) parts.push(`${t("advance").toLowerCase()} ${kc(p.advance, 0)}`);
+  if (p.advance != null) parts.push(`${t("advance").toLowerCase()} ${kc(p.advance, 0)}${t(`per.${p.advancePeriod ?? "month"}`)}`);
   return parts.join(" · ");
 }
 
@@ -112,7 +113,13 @@ function priceFormHtml(supplier, p) {
       ${fromSelects(from)}
       ${fields}
       ${numberField("monthly", t("priceMonthly"), last?.monthly, t("kcPerMonth"))}
-      ${numberField("advance", t("advance"), last?.advance, t("kcPerMonth"))}
+      ${numberField("advance", t("advance"), last?.advance, c === "water" ? "Kč" : t("kcPerMonth"))}
+      ${
+        c === "water"
+          ? `<label class="field" for="pr-advancePeriod">${esc(t("advancePeriod"))}</label>
+      <select id="pr-advancePeriod" name="advancePeriod">${Object.keys(ADVANCE_PERIODS).map((k) => `<option value="${k}" ${k === (last?.advancePeriod ?? "month") ? "selected" : ""}>${esc(t(`period.${k}`))}</option>`).join("")}</select>`
+          : ""
+      }
       <p class="hint">${esc(t(c === "water" ? "priceHintWater" : "priceHint"))}</p>
       <p class="warn" id="pr-error" hidden></p>
       <div class="form-actions">
@@ -276,6 +283,7 @@ function bindPriceForm(root, rerender) {
       from: `${data.get("fromYear")}-${data.get("fromMonth")}`,
       tariff: data.get("tariff") ?? "",
       breaker: data.get("breaker") ?? "",
+      advancePeriod: data.get("advancePeriod") ?? "month",
       ...values,
     };
     editingPrice = null;

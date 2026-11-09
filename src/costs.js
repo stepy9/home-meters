@@ -1,6 +1,6 @@
 // Costs from consumption and prices: per month, what the kWh (gas: m³ turned into kWh; water: m³ at the water
 // and sewage charge) cost at the price that applied then, plus that month's fixed fees; and what was paid in advances against it.
-import { commodityConsumption, priceAt } from "./data.js";
+import { commodityConsumption, monthlyAdvance, priceAt } from "./data.js";
 
 // month -> { total, parts: { energy, fixed }, estimated, missing } where missing marks a month whose price
 // is not known (it then has no cost and is left out of totals).
@@ -43,7 +43,7 @@ export function advanceBalance(state, commodity, year, costs = commodityCosts(st
       continue;
     }
     cost += row.total;
-    paid += priceAt(state, commodity, month)?.advance ?? 0;
+    paid += monthlyAdvance(priceAt(state, commodity, month)) ?? 0;
     months += 1;
   }
   return { cost, paid, balance: paid - cost, months, missing };
