@@ -457,3 +457,8 @@ select {
 .chart-note { margin: -4px 0 8px; }
 .info-note { margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; color: var(--muted); }
 .info-note a { color: var(--accent); font-weight: 600; }
+/* An ⓘ by a heading; tapping it shows the explanation under the heading. */
+.with-tip { display: flex; align-items: center; gap: 8px; position: relative; }
+.info-tip { flex: none; width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1.5px solid var(--muted); background: none; color: var(--muted); font: italic 700 12px/1 Georgia, serif; cursor: pointer; }
+.info-tip[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.info-tip-text { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); box-shadow: 0 6px 20px rgb(0 0 0 / 0.25); font-size: 13px; font-weight: 400; line-height: 1.4; color: var(--text); }

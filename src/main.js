@@ -114,6 +114,19 @@ function showSync(s) {
 setLang(lang);
 // "Enter" on the missing-reading reminder: the entry screen at that month.
 document.addEventListener("click", (event) => {
+  // An ⓘ opens its text; a tap anywhere else closes any open one.
+  const tip = event.target.closest(".info-tip");
+  document.querySelectorAll(".info-tip[aria-expanded=true]").forEach((b) => {
+    if (b === tip) return;
+    b.setAttribute("aria-expanded", "false");
+    b.nextElementSibling.hidden = true;
+  });
+  if (tip) {
+    const open = tip.getAttribute("aria-expanded") !== "true";
+    tip.setAttribute("aria-expanded", String(open));
+    tip.nextElementSibling.hidden = !open;
+    return;
+  }
   const link = event.target.closest("[data-settings-section]");
   if (link) setSettingsSection(link.dataset.settingsSection);
   const close = event.target.closest("[data-dismiss]");

@@ -2,7 +2,7 @@ import { advanceBalance, billingPeriodOf } from "../costs.js";
 import { billsOf, deleteBill, monthAdd, setBill } from "../data.js";
 import { fmt, t } from "../i18n.js";
 import { getState, update } from "../store.js";
-import { esc, parseNumber, toast } from "./dom.js";
+import { esc, infoTip, parseNumber, toast } from "./dom.js";
 import { currentMonth } from "./month-picker.js";
 
 // Bills as the supplier issued them, each beside what the app works out for the same months, so it shows whether
@@ -91,8 +91,7 @@ export function billsHtml(state, commodity) {
     .join("");
   return `
     <section class="card" id="bills">
-      <h2>${esc(t("billsTitle"))}</h2>
-      <p class="hint">${esc(t("billsHint"))}</p>
+      <h2 class="with-tip">${esc(t("billsTitle"))}${infoTip(t("billsHint"))}</h2>
       ${rows}
       ${open ? formHtml(state, commodity, editing.id ? state.bills[editing.id] : null) : `<button type="button" class="btn small" data-add-bill="${commodity}">+ ${esc(t("billAdd"))}</button>`}
     </section>`;

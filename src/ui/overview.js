@@ -421,6 +421,8 @@ export function renderOverview(view) {
     <div class="segmented">${tabs}</div>
     ${unitToggle}
     ${weatherNote}
+    ${years.length || weatherOn() ? "" : `<p class="info-note">${esc(t(ui.money ? "noCosts" : "noData"))}${ui.money ? ` <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a>` : ""}</p>`}
+    ${ui.money && missingPrices && years.length ? `<p class="info-note">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}
     ${supplierCardHtml(state)}
     ${forecastHtml(state)}
     ${
@@ -443,13 +445,13 @@ export function renderOverview(view) {
         <h2>${esc(t("compareTable"))}</h2>
         ${tableHtml(years, shown)}
       </section>`
-        : weatherOn() ? "" : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
+        : ""
     }
     ${ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)}
     ${ui.money && SUPPLIED.includes(ui.commodity) ? billsHtml(state, ui.commodity) : ""}
     ${ui.money ? priceChartHtml(state) : ""}
     ${ui.money ? offersHtml(ui.commodity) : ""}
-    ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}`;
+`;
 
   if (years.length) {
     yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));

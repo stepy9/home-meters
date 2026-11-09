@@ -2,7 +2,7 @@ import { compareOffers } from "../costs.js";
 import { TARIFFS, deleteOffer, isTwoTariff, setOffer } from "../data.js";
 import { fmt, t } from "../i18n.js";
 import { getState, update } from "../store.js";
-import { esc, parseNumber, toast } from "./dom.js";
+import { esc, infoTip, parseNumber, toast } from "./dom.js";
 import { currentMonth } from "./month-picker.js";
 
 // Offers from other suppliers, priced on the last twelve months of consumption beside the current price list.
@@ -66,8 +66,8 @@ export function offersHtml(commodity) {
     : `<p class="hint">${esc(t("offerNoCurrent"))}</p>`;
   return `
     <section class="card" id="offers">
-      <h2>${esc(t("offersTitle"))}</h2>
-      <p class="hint">${esc(r.months ? t("offersHint", { months: r.months, usage: fmt(r.usage, 0), unit }) : t("offersNoData"))}</p>
+      <h2 class="with-tip">${esc(t("offersTitle"))}${r.months ? infoTip(t("offersHint", { months: r.months, usage: fmt(r.usage, 0), unit })) : ""}</h2>
+      ${r.months ? "" : `<p class="hint">${esc(t("offersNoData"))}</p>`}
       ${r.months ? current + rows : ""}
       ${open ? formHtml(commodity, editing.id ? state.offers[editing.id] : null) : `<button type="button" class="btn small" data-add-offer="${commodity}">+ ${esc(t("offerAdd"))}</button>`}
     </section>`;
