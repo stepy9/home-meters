@@ -86,7 +86,7 @@ window.addEventListener("hashchange", () => {
 });
 // Data that came from Dropbox redraws the screen, except while something is being typed.
 window.addEventListener("data-change", () => {
-  if (!["INPUT", "SELECT"].includes(document.activeElement?.tagName)) render();
+  if (!["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) render();
 });
 systemDark.addEventListener("change", () => {
   if (savedTheme()) return;

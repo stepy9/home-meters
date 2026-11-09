@@ -1,6 +1,7 @@
 import { METERS, deleteReading, monthAdd, readingAt, readingBefore, readingsOf, setReading, usedBetween } from "../data.js";
 import { fmt, fmtMonth, t, unitLabel } from "../i18n.js";
 import { getState, update } from "../store.js";
+import { bindBulk, bulkHtml } from "./bulk.js";
 import { cssVar, esc, parseNumber, toast } from "./dom.js";
 
 const colorVar = { "el-vt": "--electricity", "el-nt": "--electricity-2", gas: "--gas", water: "--water" };
@@ -89,8 +90,10 @@ export function renderEntry(view) {
       <button class="btn primary" type="submit">${esc(t("save"))}</button>
       ${hasAny ? `<div class="btn-row"><button class="btn danger" type="button" id="delete-month">${esc(t("delete"))} ${esc(fmtMonth(month))}</button></div>` : ""}
     </form>
+    ${bulkHtml()}
     ${historyHtml(state)}`;
 
+  bindBulk(view);
   const form = view.querySelector("#entry-form");
   form.querySelectorAll("[data-meter]").forEach(refreshCard);
   form.addEventListener("input", (event) => {
