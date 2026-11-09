@@ -4,6 +4,7 @@ import { getState, update } from "../store.js";
 import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
 import { bindMonthPicker, monthPickerHtml } from "./month-picker.js";
 import { cssVar, esc, parseNumber, toast } from "./dom.js";
+import { commodityIcon } from "./icons.js";
 
 const colorVar = { "el-vt": "--electricity", "el-nt": "--electricity-2", gas: "--gas", water: "--water" };
 
@@ -25,7 +26,7 @@ function meterCard(state, meter) {
   const swapped = current?.oldFinal != null;
   return `
     <section class="card" data-meter="${meter.id}">
-      <div class="meter-head"><span class="dot" style="background:${cssVar(colorVar[meter.id])}"></span>${esc(t(`meter.${meter.id}`))}</div>
+      <div class="meter-head"><span class="meter-icon" style="color:${cssVar(colorVar[meter.id])}">${commodityIcon(meter.commodity)}</span>${esc(t(`meter.${meter.id}`))}</div>
       <label class="field" for="v-${meter.id}">${esc(prev ? t("previous", { value: `${fmt(prev.value, 3)} ${unit}`, month: fmtMonth(prev.month) }) : t("noPrevious"))}</label>
       <div class="meter-input">
         <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" id="v-${meter.id}" name="value" value="${current ? esc(current.value) : ""}" />

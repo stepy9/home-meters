@@ -326,3 +326,9 @@ td small { display: block; font-size: 11px; }
 .mp-month.is-selected.has-data::after { background: var(--on-accent); }
 .mp-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
 .mp-link { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 8px 4px; min-height: 36px; }
+
+.c-icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.meter-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: color-mix(in srgb, currentColor 15%, transparent); }
+.meter-icon .c-icon { width: 18px; height: 18px; }
+.segmented button[data-commodity] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.segmented button[data-commodity] .c-icon { width: 18px; height: 18px; color: var(--c); }

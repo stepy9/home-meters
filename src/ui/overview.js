@@ -3,6 +3,7 @@ import { COMMODITIES, byYear, change, commodityConsumption, metersOf, yearTotal 
 import { fmt, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
+import { commodityIcon } from "./icons.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -154,7 +155,7 @@ export function renderOverview(view) {
   if (!years.includes(ui.year)) ui.year = years[0] ?? null;
   if (!ui.compared || ![...ui.compared].some((y) => years.includes(y))) ui.compared = new Set(years.slice(0, 3));
 
-  const tabs = COMMODITIES.map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}">${esc(t(c))}</button>`).join("");
+  const tabs = COMMODITIES.map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c])}">${commodityIcon(c)}<span>${esc(t(c))}</span></button>`).join("");
   const unitToggle =
     ui.commodity === "gas"
       ? `<div class="segmented" style="max-width:200px">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div>`
