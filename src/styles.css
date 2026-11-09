@@ -404,17 +404,14 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .settings-tabs { margin-bottom: 12px; }
 /* On a wide screen the settings sections are a list on the left, as in Garmin tool. */
 @media (min-width: 720px) {
-  main[data-tab="settings"] { max-width: 1280px; }
+  main[data-tab="settings"] { max-width: 1100px; }
   .settings-layout { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
   .settings-tabs { flex-direction: column; position: sticky; top: 72px; padding: 6px; }
   .settings-tabs button { text-align: left; justify-content: flex-start; }
 }
-/* Wide enough for two columns: the cards of a section side by side, so the page is not one long strip. */
-@media (min-width: 1100px) {
-  .settings-group { columns: 2; column-gap: 16px; }
-  .settings-group > *, .settings-group .card { break-inside: avoid; }
-  .settings-group .card { display: inline-block; width: 100%; }
-}
 /* Each commodity's suppliers are a card of their own, so they flow into the columns. */
 .suppliers { display: contents; }
 .suppliers .supplier-group { margin-top: 0; padding-top: 0; border-top: 0; }
+/* Checkboxes side by side where they fit. */
+.checks { display: flex; flex-wrap: wrap; gap: 0 24px; }
+#gas-factor { max-width: 200px; }

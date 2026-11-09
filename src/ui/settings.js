@@ -90,7 +90,7 @@ export function renderSettings(view, rerender) {
     </section>
     <section class="card">
       <h2>${esc(t("settingsMeters"))}</h2>
-      ${METERS.map((m) => `<label class="check"><input type="checkbox" data-active="${m.id}" ${state.config.active[m.id] ? "checked" : ""} />${esc(t(`meter.${m.id}`))}</label>`).join("")}
+      <div class="checks">${METERS.map((m) => `<label class="check"><input type="checkbox" data-active="${m.id}" ${state.config.active[m.id] ? "checked" : ""} />${esc(t(`meter.${m.id}`))}</label>`).join("")}</div>
       <p class="hint">${esc(t("activeHint"))}</p>
       <label class="field" for="gas-factor">${esc(t("gasFactor"))}</label>
       <input type="text" inputmode="decimal" id="gas-factor" value="${esc(state.config.gasKwhFactor)}" />
