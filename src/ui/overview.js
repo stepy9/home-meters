@@ -6,7 +6,8 @@ import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
 import { advanceBalance, commodityCosts } from "../costs.js";
 import { currentMonth } from "./month-picker.js";
-import { contractHtml, priceSummary } from "./suppliers.js";
+import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
+import { noticesHtml } from "./notices.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -213,7 +214,7 @@ function supplierCardHtml(state) {
   if (!s) return `<section class="card supplier-card"><p class="hint">${esc(t("supplierNone"))} <a href="#settings">${esc(t("tabSettings"))}</a></p></section>`;
   const point = s.point;
   const price = priceAt(state, ui.commodity, currentMonth());
-  const details = [s.product, `${t("since")} ${fmtMonth(s.from)}`, point && ui.commodity !== "water" && `${ui.commodity === "gas" ? "EIC" : "EAN"} ${point}`].filter(Boolean).map(esc).join(" · ");
+  const details = [s.product, contractPeriod(s), point && ui.commodity !== "water" && `${ui.commodity === "gas" ? "EIC" : "EAN"} ${point}`].filter(Boolean).map(esc).join(" · ");
   return `
     <section class="card supplier-card">
       <div class="hint">${esc(t("supplier"))}</div>
@@ -255,6 +256,7 @@ export function renderOverview(view) {
     `<div class="chips">${years.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
   view.innerHTML = `
+    ${noticesHtml()}
     <div class="segmented">${tabs}</div>
     ${unitToggle}
     ${supplierCardHtml(state)}

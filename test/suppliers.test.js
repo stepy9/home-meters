@@ -52,3 +52,27 @@ test("days until a contract ends", () => {
   assert.equal(daysUntil("2026-11-01", today), -8);
   assert.equal(daysUntil("", today), null);
 });
+
+test("a contract has a start day, and an end only with a fixed price", () => {
+  const s = setSupplier(emptyState(), { id: "x", commodity: "gas", name: "ČEZ", start: "2024-10-15", contractEnd: "2026-12-31" }, 1);
+  assert.equal(s.suppliers.x.from, "2024-10");
+  assert.equal(s.suppliers.x.start, "2024-10-15");
+  assert.equal(s.suppliers.x.contractEnd, "2026-12-31");
+  // An end before the start is dropped; water never has one; an old record with only the month starts on the 1st.
+  assert.equal(setSupplier(emptyState(), { id: "y", commodity: "gas", name: "A", start: "2026-01-01", contractEnd: "2025-01-01" }).suppliers.y.contractEnd, "");
+  assert.equal(setSupplier(emptyState(), { id: "w", commodity: "water", name: "PVK", start: "2020-01-01", contractEnd: "2030-01-01" }).suppliers.w.contractEnd, "");
+  assert.equal(normalizeState({ version: 2, suppliers: { o: { id: "o", commodity: "gas", name: "Old", from: "2023-05" } } }).suppliers.o.start, "2023-05-01");
+});
+
+test("the reminder starts the chosen months before the fixed price ends", async () => {
+  const { reminderDue } = await import("../src/data.js");
+  const s = { contractEnd: "2026-12-31", remindMonths: 3 };
+  // 31 December minus 3 months: 30 September (September has no 31st) is the day it starts.
+  assert.equal(reminderDue(s, new Date(2026, 8, 29, 23)), false);
+  assert.equal(reminderDue(s, new Date(2026, 8, 30)), true);
+  assert.equal(reminderDue({ contractEnd: "2026-12-31", remindMonths: 3 }, new Date(2026, 9, 1)), true);
+  assert.equal(reminderDue({ contractEnd: "2026-12-31", remindMonths: 6 }, new Date(2026, 6, 1)), true);
+  assert.equal(reminderDue({ contractEnd: "2026-12-31", remindMonths: 6 }, new Date(2026, 5, 29)), false);
+  assert.equal(reminderDue({ contractEnd: "" }, new Date()), false);
+  assert.equal(setSupplier(emptyState(), { id: "x", commodity: "gas", name: "A", start: "2024-01-01", remindMonths: 5 }).suppliers.x.remindMonths, 2);
+});

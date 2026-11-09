@@ -368,3 +368,12 @@ input[type="date"] { width: 100%; min-height: 44px; font-size: 17px; padding: 8p
 .btn.small { min-height: 38px; padding: 6px 12px; margin-top: 8px; font-size: 14px; }
 .view-row + .view-row { margin-top: -4px; }
 small.muted { display: inline; color: var(--muted); font-size: 11px; }
+.notices { display: grid; gap: 8px; margin: 8px 0 4px; }
+.notice {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4;
+  background: color-mix(in srgb, var(--electricity) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--electricity) 45%, transparent);
+}
+.notice.is-past { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.notice a { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.notice-icon { flex: none; padding-top: 1px; }
+.notice-icon .c-icon { width: 18px; height: 18px; }

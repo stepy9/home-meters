@@ -5,6 +5,7 @@ import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
 import { bindMonthPicker, monthPickerHtml } from "./month-picker.js";
 import { cssVar, esc, parseNumber, toast } from "./dom.js";
 import { commodityIcon } from "./icons.js";
+import { noticesHtml } from "./notices.js";
 
 const colorVar = { "el-vt": "--electricity", "el-nt": "--electricity-2", gas: "--gas", water: "--water" };
 
@@ -84,6 +85,7 @@ export function renderEntry(view) {
   // Months with any reading of an active meter, marked in the picker.
   const marked = new Set(meters.flatMap((m) => readingsOf(state, m.id).map((r) => r.month)));
   view.innerHTML = `
+    ${noticesHtml()}
     <form id="entry-form" novalidate>
       <section class="card">
         <span class="field">${esc(t("month"))}</span>

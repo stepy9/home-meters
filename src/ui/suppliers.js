@@ -1,5 +1,7 @@
 import {
-  CONTRACT_WARN_DAYS,
+  DEFAULT_REMIND_MONTHS,
+  REMIND_MONTHS,
+  reminderDue,
   ADVANCE_PERIODS,
   BREAKERS,
   SUPPLIED,
@@ -37,7 +39,7 @@ const deleteButton = (id) => `<button type="button" class="btn danger icon-btn" 
 export function contractHtml(supplier, { current = true } = {}) {
   if (!supplier.contractEnd) return "";
   const days = daysUntil(supplier.contractEnd);
-  const cls = !current ? "" : days < 0 ? "contract-past" : days <= CONTRACT_WARN_DAYS ? "contract-soon" : "";
+  const cls = !current ? "" : days < 0 ? "contract-past" : reminderDue(supplier) ? "contract-soon" : "";
   const when = days < 0 ? t("contractEnded") : days === 0 ? t("contractToday") : t("contractIn", { days });
   return `<span class="contract ${cls}">${esc(t("contractEnd"))} ${esc(fmtDate(supplier.contractEnd))} (${esc(when)})</span>`;
 }
@@ -78,6 +80,34 @@ const fromSelects = (from) => `
     <select name="fromMonth" aria-label="${esc(t("month"))}">${options(range(1, 12).map(pad), from.slice(5), monthsLong)}</select>
     <select name="fromYear" aria-label="${esc(t("year"))}">${options(range(thisYear() - 25, thisYear() + 1).reverse(), from.slice(0, 4))}</select>
   </div>`;
+
+// A date as day, month and year selects named <prefix>Day/Month/Year; with optional the empty choice too.
+const dateSelects = (prefix, date, { optional = false, years }) => {
+  const [y, m, d] = date ? date.split("-") : ["", "", ""];
+  const empty = optional ? '<option value="">–</option>' : "";
+  return `
+  <div class="three-cols">
+    <select name="${prefix}Day" aria-label="${esc(t("day"))}">${empty}${options(range(1, 31).map(pad), d)}</select>
+    <select name="${prefix}Month" aria-label="${esc(t("month"))}">${empty}${options(range(1, 12).map(pad), m, monthsLong)}</select>
+    <select name="${prefix}Year" aria-label="${esc(t("year"))}">${empty}${options(years, y)}</select>
+  </div>`;
+};
+
+// The date picked in such selects: "" when all are empty, null when only some are or it does not exist (31 February).
+function readDate(data, prefix) {
+  const [d, m, y] = ["Day", "Month", "Year"].map((k) => data.get(prefix + k) ?? "");
+  if (!d && !m && !y) return "";
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  if (!d || !m || !y || date.getDate() !== Number(d)) return null;
+  return `${y}-${m}-${d}`;
+}
+
+// "1. 10. 2024 – 31. 12. 2026 · fixed price" or "since 1. 10. 2024 · no fixed price" (water: just the start).
+export function contractPeriod(s) {
+  const start = fmtDate(s.start ?? `${s.from}-01`);
+  if (s.commodity === "water") return `${t("since")} ${start}`;
+  return s.contractEnd ? `${start} – ${fmtDate(s.contractEnd)} · ${t("withFixation")}` : `${t("since")} ${start} · ${t("noFixation")}`;
+}
 
 // ---- Price list of a supplier ----
 
@@ -154,7 +184,7 @@ function pricesHtml(supplier) {
 function itemHtml(s) {
   const state = getState();
   const current = supplierAt(state, s.commodity, currentMonth())?.id === s.id;
-  const details = [s.product, `${t("since")} ${fmtMonth(s.from)}`].filter(Boolean).map(esc).join(" · ");
+  const details = [s.product, contractPeriod(s)].filter(Boolean).map(esc).join(" · ");
   const prices = pricesOf(state, s.id);
   const latest = prices.filter((p) => p.from <= currentMonth()).at(-1) ?? prices.at(-1);
   const open = pricesOpen === s.id;
@@ -173,8 +203,8 @@ function itemHtml(s) {
 }
 
 function formHtml(commodity, s) {
-  const from = s?.from ?? currentMonth();
-  const [endY, endM, endD] = s?.contractEnd ? s.contractEnd.split("-") : ["", "", ""];
+  const today = new Date();
+  const start = s?.start ?? `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
   // A name typed for another commodity is offered here too: often the same company supplies more.
   const names = [...new Set(SUPPLIED.flatMap((c) => suppliersOf(getState(), c)).map((x) => x.name))];
   // Water has no product, fixed price or supply point code to keep.
@@ -185,19 +215,18 @@ function formHtml(commodity, s) {
       <label class="field" for="sup-name">${esc(t("supplierName"))}</label>
       <input type="text" id="sup-name" name="name" list="sup-names" autocomplete="off" value="${esc(s?.name ?? "")}" />
       <datalist id="sup-names">${names.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
-      <label class="field">${esc(t("supplierFrom"))}</label>
-      ${fromSelects(from)}
+      <label class="field">${esc(t("contractStart"))}</label>
+      ${dateSelects("start", start, { years: range(thisYear() - 25, thisYear() + 1).reverse() })}
       ${
         energy
           ? `
       <label class="field" for="sup-product">${esc(t("supplierProduct"))}</label>
       <input type="text" id="sup-product" name="product" value="${esc(s?.product ?? "")}" />
-      <label class="field">${esc(t("contractEnd"))}</label>
-      <div class="three-cols">
-        <select name="endDay" aria-label="${esc(t("day"))}"><option value="">–</option>${options(range(1, 31).map(pad), endD)}</select>
-        <select name="endMonth" aria-label="${esc(t("month"))}"><option value="">–</option>${options(range(1, 12).map(pad), endM, monthsLong)}</select>
-        <select name="endYear" aria-label="${esc(t("year"))}"><option value="">–</option>${options(range(thisYear() - 2, thisYear() + 6), endY)}</select>
-      </div>
+      <label class="field">${esc(t("contractEndOptional"))}</label>
+      ${dateSelects("end", s?.contractEnd, { optional: true, years: range(thisYear() - 10, thisYear() + 6) })}
+      <p class="hint">${esc(t("contractEndHint"))}</p>
+      <label class="field" for="sup-remind">${esc(t("remindBefore"))}</label>
+      <select id="sup-remind" name="remindMonths">${REMIND_MONTHS.map((n) => `<option value="${n}" ${n === (s?.remindMonths ?? DEFAULT_REMIND_MONTHS) ? "selected" : ""}>${esc(t(n === 1 ? "remindMonth" : n < 5 ? "remindMonthsFew" : "remindMonthsMany", { n }))}</option>`).join("")}</select>
       <label class="field" for="sup-point">${esc(pointLabel(commodity))}</label>
       <input type="text" id="sup-point" name="point" autocomplete="off" ${commodity === "gas" ? 'autocapitalize="characters"' : 'inputmode="numeric"'} value="${esc(s?.point ?? "")}" />`
           : ""
@@ -347,19 +376,18 @@ export function bindSuppliers(root, rerender) {
     const data = new FormData(form);
     const show = errorShower(form, "#sup-error");
     if (!String(data.get("name")).trim()) return show("supplierInvalid");
-    // The contract end is all three parts or none, and a real date (no 31 February).
-    const [d, m, y] = ["endDay", "endMonth", "endYear"].map((k) => data.get(k) ?? "");
-    let contractEnd = "";
-    if (d || m || y) {
-      const date = new Date(Number(y), Number(m) - 1, Number(d));
-      if (!d || !m || !y || date.getDate() !== Number(d)) return show("contractInvalid");
-      contractEnd = `${y}-${m}-${d}`;
-    }
+    // The start is required; the end (a fixed price) is all three parts or none, a real date, not before the start.
+    const start = readDate(data, "start");
+    if (!start) return show("contractStartInvalid");
+    const contractEnd = readDate(data, "end") ?? null;
+    if (contractEnd === null) return show("contractInvalid");
+    if (contractEnd && contractEnd < start) return show("contractBeforeStart");
     const fields = {
       id: editing.id ?? undefined,
       commodity: editing.commodity,
       name: data.get("name"),
-      from: `${data.get("fromYear")}-${data.get("fromMonth")}`,
+      start,
+      remindMonths: Number(data.get("remindMonths") ?? DEFAULT_REMIND_MONTHS),
       product: data.get("product") ?? "",
       contractEnd,
       point: data.get("point") ?? "",

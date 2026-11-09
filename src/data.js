@@ -229,16 +229,24 @@ const text = (value, max = 200) => (typeof value === "string" ? value.trim().sli
 
 // A supplier record (one commodity, as product, fixed price and supply point differ between electricity and
 // gas) with its fields in a fixed order, or null when it lacks a name, a commodity or a start.
+// start: the contract's first day; from: its month, which the supplier covers from. contractEnd: the last day of
+// a fixed-price contract (empty without a fixed price; never for water).
 export function cleanSupplier(r, updatedAt) {
   const name = text(r.name, 80);
-  if (!r.id || !name || !SUPPLIED.includes(r.commodity) || !isMonth(r.from)) return null;
+  // Records from before the start date kept only the month: the contract started on its first day.
+  const start = isDate(r.start) ? r.start : isMonth(r.from) ? `${r.from}-01` : null;
+  if (!r.id || !name || !SUPPLIED.includes(r.commodity) || !start) return null;
+  const end = r.commodity !== "water" && isDate(r.contractEnd) && r.contractEnd >= start ? r.contractEnd : "";
   return {
     id: String(r.id),
     commodity: r.commodity,
     name,
-    from: r.from,
+    start,
+    from: start.slice(0, 7),
     product: text(r.product, 80),
-    contractEnd: isDate(r.contractEnd) ? r.contractEnd : "",
+    contractEnd: end,
+    // How many months before the fixed price ends to remind.
+    remindMonths: REMIND_MONTHS.includes(r.remindMonths) ? r.remindMonths : DEFAULT_REMIND_MONTHS,
     point: text(r.point, 40),
     customerNo: text(r.customerNo, 40),
     note: text(r.note, 500),
@@ -279,7 +287,19 @@ export function daysUntil(date, today = new Date()) {
   const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((Date.UTC(y, m - 1, d) - start) / 86400000);
 }
-export const CONTRACT_WARN_DAYS = 60;
+export const REMIND_MONTHS = [1, 2, 3, 6];
+export const DEFAULT_REMIND_MONTHS = 2;
+
+// Whether a fixed price's reminder is due: from the chosen number of months before its end (the same day of
+// the month, or the month's last day when shorter).
+export function reminderDue(supplier, today = new Date()) {
+  if (!isDate(supplier.contractEnd)) return false;
+  const [y, m, d] = supplier.contractEnd.split("-").map(Number);
+  const months = supplier.remindMonths ?? DEFAULT_REMIND_MONTHS;
+  const lastDay = new Date(y, m - 1 - months + 1, 0).getDate();
+  const remindOn = new Date(y, m - 1 - months, Math.min(d, lastDay));
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate()) >= remindOn;
+}
 
 // Distribution rates (electricity): one-tariff D01d/D02d, the rest have a low tariff (NT) for some hours a day.
 export const TARIFFS = [
