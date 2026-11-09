@@ -24,7 +24,7 @@ export const defaultConfig = () => ({
   gasKwhFactor: 10.6,
   updatedAt: 0,
 });
-export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, config: defaultConfig() });
+export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, config: defaultConfig() });
 
 export const readingKey = (meter, month) => `${meter}|${month}`;
 
@@ -70,6 +70,15 @@ export function normalizeState(raw) {
       if (price) state.prices[id] = price;
     }
   }
+  for (const [id, r] of Object.entries(raw.offers ?? {})) {
+    if (!r || r.id !== id) continue;
+    const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
+    if (r.deleted) state.offers[id] = { id, deleted: true, updatedAt };
+    else {
+      const offer = cleanOffer(r, updatedAt);
+      if (offer) state.offers[id] = offer;
+    }
+  }
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
@@ -92,6 +101,7 @@ export function mergeStates(a, b) {
     readings: merge(a.readings, b.readings),
     suppliers: merge(a.suppliers, b.suppliers),
     prices: merge(a.prices, b.prices),
+    offers: merge(a.offers, b.offers),
     config,
   };
 }
@@ -100,7 +110,7 @@ export function mergeStates(a, b) {
 export function stateText(state) {
   const readings = Object.fromEntries(Object.keys(state.readings).sort().map((key) => [key, state.readings[key]]));
   const sorted = (o = {}) => Object.fromEntries(Object.keys(o).sort().map((id) => [id, o[id]]));
-  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), config: state.config }, null, 1);
+  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), offers: sorted(state.offers), config: state.config }, null, 1);
 }
 
 export function setReading(state, { meter, month, value, oldFinal, newStart }, now = Date.now()) {
@@ -219,7 +229,7 @@ export function syncSummary(state) {
 export function changedKeys(from, to) {
   const keys = Object.keys(to.readings).filter((k) => JSON.stringify(from?.readings[k]) !== JSON.stringify(to.readings[k]));
   const differ = (name) => Object.keys(to[name] ?? {}).filter((k) => JSON.stringify(from?.[name]?.[k]) !== JSON.stringify(to[name][k]));
-  const suppliers = [...differ("suppliers"), ...differ("prices")];
+  const suppliers = [...differ("suppliers"), ...differ("prices"), ...differ("offers")];
   const config = JSON.stringify(from?.config) !== JSON.stringify(to.config);
   return { readings: keys.length + suppliers.length, config };
 }
@@ -372,3 +382,38 @@ export function priceAt(state, commodity, month) {
   if (!supplier) return null;
   return pricesOf(state, supplier.id).filter((p) => p.from <= month).at(-1) ?? null;
 }
+
+// An offer from another supplier, to compare against the current price list on the same consumption: a name and
+// prices like a price period (without an advance).
+export function cleanOffer(r, updatedAt) {
+  const name = text(r.name, 80);
+  if (!r.id || !name || !["electricity", "gas"].includes(r.commodity)) return null;
+  const tariff = r.commodity === "electricity" && TARIFFS.some((x) => x.id === r.tariff) ? r.tariff : "";
+  return {
+    id: String(r.id),
+    commodity: r.commodity,
+    name,
+    tariff,
+    unit: money(r.unit),
+    unitNt: isTwoTariff(tariff) ? money(r.unitNt) : null,
+    monthly: money(r.monthly),
+    note: text(r.note, 300),
+    updatedAt,
+  };
+}
+
+export function setOffer(state, fields, now = Date.now()) {
+  const id = fields.id || `o${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const offer = cleanOffer({ ...fields, id }, now);
+  if (!offer) throw new Error("invalid-offer");
+  return { ...state, offers: { ...state.offers, [id]: offer } };
+}
+
+export function deleteOffer(state, id, now = Date.now()) {
+  return { ...state, offers: { ...state.offers, [id]: { id, deleted: true, updatedAt: now } } };
+}
+
+export const offersOf = (state, commodity) =>
+  Object.values(state.offers ?? {})
+    .filter((o) => !o.deleted && o.commodity === commodity)
+    .sort((a, b) => a.name.localeCompare(b.name));

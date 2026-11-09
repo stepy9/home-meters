@@ -82,3 +82,22 @@ test("a quarterly or yearly advance counts per month", () => {
   close(advanceBalance(s, "water", 2026).paid, 2 * 600);
   assert.equal(setPrice(s, { id: "w1", supplierId: "wt", from: "2020-01", advancePeriod: "week" }).prices.w1.advancePeriod, "month");
 });
+
+test("offers compare on the last twelve months at the current price", async () => {
+  const { compareOffers } = await import("../src/costs.js");
+  const { setOffer, deleteOffer } = await import("../src/data.js");
+  let s = home();
+  s = setOffer(s, { id: "a", commodity: "electricity", name: "Levná", tariff: "D25d", unit: 4, unitNt: 2, monthly: 300 }, 7);
+  s = setOffer(s, { id: "b", commodity: "electricity", name: "Drahá", tariff: "D02d", unit: 6, unitNt: 9, monthly: 100 }, 7);
+  const r = compareOffers(s, "electricity", "2026-03");
+  assert.equal(r.months, 3);
+  // Usage Jan–Mar: HT 200+150+100, LT 100+50+50.
+  close(r.usage, 650);
+  close(r.current.cost, 450 * 4 + 200 * 2.5 + 3 * 400);
+  assert.deepEqual(r.offers.map((o) => o.offer.id), ["a", "b"]);
+  close(r.offers[0].cost, 450 * 4 + 200 * 2 + 3 * 300);
+  close(r.offers[0].diff, r.offers[0].cost - r.current.cost);
+  // A one-tariff offer prices LT kWh at the HT price.
+  close(r.offers[1].cost, 650 * 6 + 3 * 100);
+  assert.equal(compareOffers(deleteOffer(s, "a", 8), "electricity", "2026-03").offers.length, 1);
+});

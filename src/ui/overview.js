@@ -8,6 +8,7 @@ import { advanceBalance, commodityCosts } from "../costs.js";
 import { currentMonth } from "./month-picker.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
+import { bindOffers, offersHtml } from "./offers.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -280,6 +281,7 @@ export function renderOverview(view) {
       </section>`
         : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
     }
+    ${ui.money ? offersHtml(ui.commodity) : ""}
     ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings">${esc(t("tabSettings"))}</a></p>` : ""}`;
 
   if (years.length) {
@@ -287,6 +289,7 @@ export function renderOverview(view) {
     compareChart(view.querySelector("#compare-chart"), years, shown);
   }
 
+  bindOffers(view, () => renderOverview(view));
   view.querySelectorAll("[data-commodity]").forEach((b) =>
     b.addEventListener("click", () => {
       ui.commodity = b.dataset.commodity;

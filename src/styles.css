@@ -377,3 +377,9 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .notice a { color: var(--accent); font-weight: 600; white-space: nowrap; }
 .notice-icon { flex: none; padding-top: 1px; }
 .notice-icon .c-icon { width: 18px; height: 18px; }
+.offer-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.offer-row.is-current { border-bottom-width: 2px; }
+.offer-main { min-width: 0; }
+.offer-main .hint { margin: 2px 0 0; }
+.offer-cost { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.offer-cost small { display: block; font-weight: 600; font-size: 12px; }
