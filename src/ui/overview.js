@@ -9,6 +9,7 @@ import { currentMonth } from "./month-picker.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
 import { bindOffers, offersHtml } from "./offers.js";
+import { monthlyDegreeDays, perDegreeDays } from "../weather.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -22,12 +23,12 @@ const saved = (() => {
 })();
 // money: costs in Kč instead of consumption.
 // quarters: charts and table by quarter instead of by month.
-const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null };
+const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, gasWeather: saved.gasWeather ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null };
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 const periodLabels = () => (ui.quarters ? QUARTERS : t("months"));
 const remember = () => {
   try {
-    localStorage.setItem(viewKey, JSON.stringify({ commodity: ui.commodity, gasInKwh: ui.gasInKwh, money: ui.money, quarters: ui.quarters }));
+    localStorage.setItem(viewKey, JSON.stringify({ commodity: ui.commodity, gasInKwh: ui.gasInKwh, gasWeather: ui.gasWeather, money: ui.money, quarters: ui.quarters }));
   } catch {}
 };
 
@@ -40,7 +41,21 @@ const yearColor = (years, year) => {
   return cssVar(`--year-${years.indexOf(year) % 6}`);
 };
 
-const unitOf = () => (ui.money ? "Kč" : ui.commodity === "electricity" ? "kWh" : ui.commodity === "gas" && ui.gasInKwh ? "kWh" : "m³");
+const weatherOn = () => ui.commodity === "gas" && ui.gasWeather && !ui.money;
+const unitOf = () =>
+  ui.money ? "Kč" : ui.commodity === "electricity" ? "kWh" : ui.commodity === "gas" && ui.gasInKwh ? (weatherOn() ? t("perDD", { unit: "kWh" }) : "kWh") : weatherOn() ? t("perDD", { unit: "m³" }) : "m³";
+
+// Degree days for the place in the settings, fetched once per place and kept while the app is open.
+const weather = { key: null, data: null, loading: false, error: null };
+function loadWeather(location, from, to, redraw) {
+  const key = `${location.lat},${location.lon},${from},${to}`;
+  if (weather.key === key && (weather.data || weather.loading || weather.error)) return;
+  Object.assign(weather, { key, data: null, loading: true, error: null });
+  monthlyDegreeDays(location, from, to)
+    .then((data) => Object.assign(weather, { data, loading: false }))
+    .catch((error) => Object.assign(weather, { error: error.message, loading: false }))
+    .finally(() => weather.key === key && redraw());
+}
 // Kč as whole crowns; consumption to a tenth.
 const fmtVal = (v) => fmt(v, ui.money ? 0 : 1);
 
@@ -167,13 +182,14 @@ function tableHtml(years, table) {
   const rows = periodLabels()
     .map((name, i) => `<tr><td>${esc(name)}</td>${cols.map((y) => cell(table.get(y), i, y)).join("")}</tr>`)
     .join("");
-  const totals = cols.map((y) => `<td>${fmt(yearTotal(table.get(y)).total, 0)}</td>`).join("");
+  // Per degree day a sum means nothing: the average month instead.
+  const totals = cols.map((y) => { const { total, months } = yearTotal(table.get(y)); return `<td>${fmt(weatherOn() ? (months ? total / months : 0) : total, weatherOn() ? 1 : 0)}</td>`; }).join("");
   const estimated = cols.some((y) => table.get(y).some((c) => c?.estimated));
   return `
     <div class="table-wrap"><table>
       <thead><tr><th>${esc(unitOf())}</th>${head}</tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr><td>${esc(t("total"))}</td>${totals}</tr></tfoot>
+      <tfoot><tr><td>${esc(t(weatherOn() ? "average" : "total"))}</td>${totals}</tr></tfoot>
     </table></div>
     ${estimated ? `<p class="hint">${esc(t("estimated"))}</p>` : ""}`;
 }
@@ -207,7 +223,7 @@ function statsHtml(table, year, state) {
     }
   }
   return `<div class="stats">
-    <div class="stat"><div class="label">${esc(t("total"))} ${year}</div><div class="value">${fmt(total, 0)}</div><div class="sub">${esc(unitOf())} · ${esc(t("perMonth", { months }))}</div></div>
+    <div class="stat"><div class="label">${esc(t(weatherOn() ? "average" : "total"))} ${year}</div><div class="value">${fmt(weatherOn() ? (months ? total / months : 0) : total, weatherOn() ? 1 : 0)}</div><div class="sub">${esc(unitOf())} · ${esc(t("perMonth", { months }))}</div></div>
     ${compare}
     ${ui.money ? advanceHtml(state, year) : ""}
   </div>`;
@@ -275,6 +291,23 @@ export function renderOverview(view) {
       else missingPrices += 1;
     }
   } else consumption = commodityConsumption(state, ui.commodity, { gasInKwh: ui.gasInKwh });
+  // Gas against the weather: per 100 degree days, heating months only, once the weather is in.
+  let weatherNote = "";
+  if (weatherOn()) {
+    const location = state.config.location;
+    const months = [...consumption.keys()].sort();
+    if (!location) weatherNote = `<p class="hint center">${esc(t("weatherNoPlace"))} <a href="#settings">${esc(t("tabSettings"))}</a></p>`;
+    else if (months.length) {
+      loadWeather(location, months[0], months.at(-1), () => renderOverview(view));
+      if (weather.data) {
+        consumption = perDegreeDays(consumption, weather.data);
+        weatherNote = `<p class="hint center">${esc(t("weatherHint", { place: location.name }))}</p>`;
+      } else {
+        weatherNote = `<p class="hint center">${esc(weather.error ? t("weatherError", { error: weather.error }) : t("weatherLoading"))}</p>`;
+        consumption = new Map();
+      }
+    }
+  }
   const { years, table } = byYear(consumption);
   const shown = ui.quarters ? new Map(years.map((y) => [y, toQuarters(table.get(y))])) : table;
   if (!years.includes(ui.year)) ui.year = years[0] ?? null;
@@ -284,7 +317,7 @@ export function renderOverview(view) {
   const moneyToggle = `<div class="segmented">${[false, true].map((m) => `<button type="button" data-money="${m}" aria-pressed="${m === ui.money}">${esc(t(m ? "viewCosts" : "viewUsage"))}</button>`).join("")}</div>`;
   const gasToggle =
     ui.commodity === "gas" && !ui.money
-      ? `<div class="segmented">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div>`
+      ? `<div class="segmented">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div><div class="segmented"><button type="button" data-gas-weather aria-pressed="${ui.gasWeather}">${esc(t("weatherToggle"))}</button></div>`
       : "";
   const periodToggle = `<div class="segmented">${[false, true].map((q) => `<button type="button" data-quarters="${q}" aria-pressed="${q === ui.quarters}">${esc(t(q ? "viewQuarters" : "viewMonths"))}</button>`).join("")}</div>`;
   const unitToggle = `<div class="view-row">${moneyToggle}${periodToggle}</div>${gasToggle ? `<div class="view-row">${gasToggle}</div>` : ""}`;
@@ -295,6 +328,7 @@ export function renderOverview(view) {
     ${noticesHtml()}
     <div class="segmented">${tabs}</div>
     ${unitToggle}
+    ${weatherNote}
     ${supplierCardHtml(state)}
     ${forecastHtml(state)}
     ${
@@ -315,7 +349,7 @@ export function renderOverview(view) {
         <h2>${esc(t("compareTable"))}</h2>
         ${tableHtml(years, shown)}
       </section>`
-        : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
+        : weatherOn() ? "" : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
     }
     ${ui.money ? offersHtml(ui.commodity) : ""}
     ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings">${esc(t("tabSettings"))}</a></p>` : ""}`;
@@ -349,6 +383,12 @@ export function renderOverview(view) {
       renderOverview(view);
     }),
   );
+  view.querySelector("[data-gas-weather]")?.addEventListener("click", () => {
+    ui.gasWeather = !ui.gasWeather;
+    ui.compared = null;
+    remember();
+    renderOverview(view);
+  });
   view.querySelectorAll("[data-gas-unit]").forEach((b) =>
     b.addEventListener("click", () => {
       ui.gasInKwh = b.dataset.gasUnit === "kWh";

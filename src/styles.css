@@ -391,3 +391,7 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .notice.is-info .notice-icon { color: var(--accent); }
 .link-inline { border: 0; background: none; padding: 0 2px; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .notice-close { margin-left: auto; flex: none; width: 32px; height: 32px; margin-top: -6px; margin-right: -6px; border: 0; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.weather-search { display: flex; gap: 8px; margin-top: 8px; }
+.weather-search input { flex: 1; min-height: 44px; font-size: 17px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
+.weather-place { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 0; }
+.place { display: block; width: 100%; text-align: left; min-height: 44px; padding: 8px 12px; margin-top: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }

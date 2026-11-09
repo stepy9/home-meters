@@ -1,9 +1,10 @@
 import { METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
-import { fmtMonth, fmtTime, t } from "../i18n.js";
+import { fmtMonth, fmtTime, lang, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { reminderCalendar } from "../reminder.js";
+import { searchPlaces } from "../weather.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 
@@ -70,6 +71,16 @@ export function renderSettings(view, rerender) {
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
     ${suppliersHtml()}
+    <section class="card" id="weather">
+      <h2>${esc(t("weatherTitle"))}</h2>
+      <p class="hint">${esc(t("weatherSettingsHint"))}</p>
+      ${state.config.location ? `<p class="weather-place"><strong>${esc(state.config.location.name)}</strong> <button type="button" class="mp-link" id="weather-clear">${esc(t("delete"))}</button></p>` : ""}
+      <form class="weather-search" id="weather-search" novalidate>
+        <input type="search" id="weather-query" placeholder="${esc(t("weatherSearch"))}" autocomplete="off" enterkeyhint="search" />
+        <button type="submit" class="btn">${esc(t("weatherFind"))}</button>
+      </form>
+      <div id="weather-results"></div>
+    </section>
     <section class="card">
       <h2>${esc(t("entrySettings"))}</h2>
       <label class="check"><input type="checkbox" id="bulk-enabled" ${bulkEnabled() ? "checked" : ""} />${esc(t("bulkEnabled"))}</label>
@@ -92,6 +103,23 @@ export function renderSettings(view, rerender) {
     <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>`;
 
   bindSuppliers(view, rerender);
+  view.querySelector("#weather-clear")?.addEventListener("click", () => update((s) => setConfig(s, { location: null })));
+  view.querySelector("#weather-search").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const query = view.querySelector("#weather-query").value.trim();
+    const results = view.querySelector("#weather-results");
+    if (!query) return;
+    results.innerHTML = `<p class="hint">${esc(t("weatherLoading"))}</p>`;
+    try {
+      const places = await searchPlaces(query, lang);
+      results.innerHTML = places.length
+        ? places.map((pl, i) => `<button type="button" class="place" data-place="${i}">${esc(pl.name)}</button>`).join("")
+        : `<p class="hint">${esc(t("weatherNone"))}</p>`;
+      results.querySelectorAll("[data-place]").forEach((b) => b.addEventListener("click", () => update((s) => setConfig(s, { location: places[Number(b.dataset.place)] }))));
+    } catch (error) {
+      results.innerHTML = `<p class="warn">${esc(t("weatherError", { error: error.message }))}</p>`;
+    }
+  });
   view.querySelector("#connect")?.addEventListener("click", connectCloud);
   view.querySelector("#sync")?.addEventListener("click", syncNow);
   view.querySelector("#disconnect")?.addEventListener("click", () => {

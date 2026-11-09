@@ -24,6 +24,7 @@ export const defaultConfig = () => ({
   gasKwhFactor: 10.6,
   // The month (1–12) each commodity's billing period ends with; 12 is the calendar year.
   billingEnd: { electricity: 12, gas: 12, water: 12 },
+  location: null,
   updatedAt: 0,
 });
 export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, config: defaultConfig() });
@@ -84,6 +85,8 @@ export function normalizeState(raw) {
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
+  // The place whose weather gas is compared against: a name and coordinates.
+  if (c.location && isNumber(c.location.lat) && isNumber(c.location.lon)) state.config.location = { name: text(c.location.name, 120), lat: c.location.lat, lon: c.location.lon };
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
