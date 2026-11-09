@@ -1,4 +1,5 @@
 import {
+  BILLING_MONTHS,
   DEFAULT_REMIND_MONTHS,
   REMIND_MONTHS,
   reminderDue,
@@ -255,6 +256,9 @@ function groupHtml(state, commodity) {
       <label class="billing-end">${esc(t("billingEnd"))}
         <select data-billing-end="${commodity}">${options(range(1, 12), state.config.billingEnd?.[commodity] ?? 12, (m) => monthsLong(m))}</select>
       </label>
+      <label class="billing-end">${esc(t("billingMonths"))}
+        <select data-billing-months="${commodity}">${options(BILLING_MONTHS, state.config.billingMonths?.[commodity] ?? 12, (n) => t(`billingEvery.${n}`))}</select>
+      </label>
       ${list.length ? list.map(itemHtml).join("") : `<p class="hint">${esc(t("suppliersEmptyOne"))}</p>`}
       ${open ? formHtml(commodity, current) : `<div class="btn-row"><button type="button" class="btn" data-add-supplier="${commodity}">+ ${esc(t("supplierAdd"))}</button></div>`}
     </div>`;
@@ -345,6 +349,9 @@ export function bindSuppliers(root, rerender) {
   );
   section.querySelectorAll("[data-billing-end]").forEach((select) =>
     select.addEventListener("change", () => update((state) => setConfig(state, { billingEnd: { [select.dataset.billingEnd]: Number(select.value) } }))),
+  );
+  root.querySelectorAll("[data-billing-months]").forEach((select) =>
+    select.addEventListener("change", () => update((state) => setConfig(state, { billingMonths: { [select.dataset.billingMonths]: Number(select.value) } }))),
   );
   section.querySelectorAll("[data-toggle-prices]").forEach((b) =>
     b.addEventListener("click", () => {

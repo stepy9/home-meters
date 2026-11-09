@@ -41,11 +41,14 @@ export function billingPeriod(state, commodity, endYear) {
   return { from: monthAdd(to, -11), to };
 }
 
-// The billing period a month falls in.
+// The billing period a month falls in. Shorter periods (a quarter, half a year) end in the billing-end month and
+// every so many months from it: with December and quarters, in March, June, September and December.
 export function billingPeriodOf(state, commodity, month) {
   const end = state.config.billingEnd?.[commodity] ?? 12;
-  const year = Number(month.slice(0, 4));
-  return billingPeriod(state, commodity, Number(month.slice(5)) <= end ? year : year + 1);
+  const length = state.config.billingMonths?.[commodity] ?? 12;
+  let to = month;
+  while ((((Number(to.slice(5)) - end) % length) + length) % length !== 0) to = monthAdd(to, 1);
+  return { from: monthAdd(to, 1 - length), to };
 }
 
 const monthsOf = ({ from, to }) => Array.from({ length: monthDiff(from, to) + 1 }, (_, i) => monthAdd(from, i));
@@ -135,7 +138,7 @@ export function forecastBilling(state, commodity, month) {
   const nowPrice = priceAt(state, commodity, month);
   const per = ADVANCE_PERIODS[nowPrice?.advancePeriod ?? "month"];
   // A suggested advance that covers the forecast cost, rounded up to a hundred crowns per payment.
-  const suggested = priced ? Math.ceil(((cost / 12) * per) / 100) * 100 : null;
+  const suggested = priced ? Math.ceil(((cost / (monthDiff(period.from, period.to) + 1)) * per) / 100) * 100 : null;
   return {
     period,
     actualMonths,

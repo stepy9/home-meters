@@ -16,6 +16,7 @@ export const METERS = [
   { id: "gas", commodity: "gas", unit: "m3" },
   { id: "water", commodity: "water", unit: "m3" },
 ];
+export const BILLING_MONTHS = [12, 6, 3, 1];
 export const COMMODITIES = ["electricity", "gas", "water"];
 export const meterById = (id) => METERS.find((meter) => meter.id === id);
 
@@ -24,6 +25,8 @@ export const defaultConfig = () => ({
   gasKwhFactor: 10.6,
   // The month (1–12) each commodity's billing period ends with; 12 is the calendar year.
   billingEnd: { electricity: 12, gas: 12, water: 12 },
+  // How many months one bill covers (water is often billed every quarter).
+  billingMonths: { electricity: 12, gas: 12, water: 12 },
   location: null,
   updatedAt: 0,
 });
@@ -97,6 +100,7 @@ export function normalizeState(raw) {
   // The place whose weather gas is compared against: a name and coordinates.
   if (c.location && isNumber(c.location.lat) && isNumber(c.location.lon)) state.config.location = { name: text(c.location.name, 120), lat: c.location.lat, lon: c.location.lon };
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
+  for (const k of SUPPLIED) if (BILLING_MONTHS.includes(c.billingMonths?.[k])) state.config.billingMonths[k] = c.billingMonths[k];
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
 }
@@ -142,6 +146,7 @@ export function deleteReading(state, meter, month, now = Date.now()) {
 export function setConfig(state, changes, now = Date.now()) {
   const config = { ...state.config, ...changes, active: { ...state.config.active, ...changes.active } };
   config.billingEnd = { ...state.config.billingEnd, ...changes.billingEnd };
+  config.billingMonths = { ...state.config.billingMonths, ...changes.billingMonths };
   return { ...state, config: { ...config, updatedAt: now } };
 }
 

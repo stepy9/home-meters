@@ -112,6 +112,14 @@ test("billing periods end in the chosen month", async () => {
   assert.deepEqual(billingPeriodOf(s, "gas", "2026-08"), { from: "2025-09", to: "2026-08" });
   assert.deepEqual(billingPeriodOf(s, "gas", "2026-09"), { from: "2026-09", to: "2027-08" });
   assert.equal(normalizeState(JSON.parse(stateText(s))).config.billingEnd.gas, 8);
+  // Quarterly water, quarters ending with December.
+  s = setConfig(s, { billingMonths: { water: 3 } });
+  assert.deepEqual(billingPeriodOf(s, "water", "2026-11"), { from: "2026-10", to: "2026-12" });
+  assert.deepEqual(billingPeriodOf(s, "water", "2026-03"), { from: "2026-01", to: "2026-03" });
+  s = setConfig(s, { billingEnd: { water: 11 } });
+  assert.deepEqual(billingPeriodOf(s, "water", "2026-11"), { from: "2026-09", to: "2026-11" });
+  assert.deepEqual(billingPeriodOf(s, "water", "2026-12"), { from: "2026-12", to: "2027-02" });
+  assert.equal(normalizeState(JSON.parse(stateText(s))).config.billingMonths.water, 3);
 });
 
 test("the billing forecast fills the months to come from a year earlier", async () => {
