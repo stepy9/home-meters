@@ -235,3 +235,17 @@ td small { display: block; font-size: 11px; }
 }
 .mini-switch button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.15); }
 .mini-switch svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.cloud-state { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; font-size: 14px; }
+.cloud-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; flex: none; }
+.cloud-state.is-ok .cloud-icon { background: var(--good); }
+.cloud-state.is-error { color: var(--danger); }
+.cloud-state.is-error .cloud-icon { background: var(--danger); }
+.cloud-state.is-syncing .cloud-icon { background: var(--accent); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.cloud-items { list-style: none; margin: 6px 0 0; padding: 0; font-size: 14px; color: var(--muted); }
+.cloud-items li { display: flex; gap: 8px; padding: 3px 0; }
+.cloud-items li.is-set { color: var(--text); }
+.cloud-items small { color: var(--muted); }
+.cloud-tick { width: 1em; text-align: center; font-weight: 700; flex: none; }
+.cloud-items li.is-set .cloud-tick { color: var(--good); }

@@ -147,3 +147,21 @@ export const yearTotal = (months) => {
 
 // Change against the same month a year earlier, as a fraction, or null.
 export const change = (cur, prev) => (cur && prev && prev.total > 0 ? cur.total / prev.total - 1 : null);
+
+// What a sync left the same everywhere: per meter how many readings and the latest month; whether settings were set.
+export function syncSummary(state) {
+  const meters = Object.fromEntries(
+    METERS.map((m) => {
+      const list = readingsOf(state, m.id);
+      return [m.id, { count: list.length, last: list.at(-1)?.month ?? null }];
+    }),
+  );
+  return { meters, config: state.config.updatedAt > 0 };
+}
+
+// Keys of records that differ between two states (what one has to take from the other), and whether the config does.
+export function changedKeys(from, to) {
+  const keys = Object.keys(to.readings).filter((k) => JSON.stringify(from?.readings[k]) !== JSON.stringify(to.readings[k]));
+  const config = JSON.stringify(from?.config) !== JSON.stringify(to.config);
+  return { readings: keys.length, config };
+}

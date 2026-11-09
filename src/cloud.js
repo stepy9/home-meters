@@ -1,4 +1,4 @@
-import { mergeStates, normalizeState, stateText } from "./data.js";
+import { changedKeys, mergeStates, normalizeState, stateText, syncSummary } from "./data.js";
 import { getState, replaceState } from "./store.js";
 
 // The data kept in one file in the user's Dropbox, in the app's own folder, so the phone and the computer show
@@ -12,6 +12,8 @@ export const dropboxAppKey = "4a022pi6zi7aouu";
 const tokenKey = "home-meters-dropbox";
 const verifierKey = "home-meters-dropbox-verifier";
 const syncedKey = "home-meters-dropbox-synced";
+// What the last sync covered and what it moved each way, shown in the settings.
+const summaryKey = "home-meters-dropbox-summary";
 const filePath = "/readings.json";
 const redirectUri = () => `${location.origin}${location.pathname}`;
 
@@ -34,7 +36,7 @@ export const cloudConnected = () => Boolean(read(tokenKey)?.refresh);
 
 const status = { state: "idle", error: null };
 const listeners = new Set();
-export const cloudStatus = () => ({ ...status, connected: cloudConnected(), at: read(syncedKey) });
+export const cloudStatus = () => ({ ...status, connected: cloudConnected(), at: read(syncedKey), summary: read(summaryKey) });
 export function onCloudStatus(listener) {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -66,6 +68,7 @@ export function disconnectCloud() {
   const token = read(tokenKey);
   write(tokenKey, null);
   write(syncedKey, null);
+  write(summaryKey, null);
   setStatus("idle");
   if (token?.access) fetch("https://api.dropboxapi.com/2/auth/token/revoke", { method: "POST", headers: { Authorization: `Bearer ${token.access}` } }).catch(() => {});
 }
@@ -144,6 +147,7 @@ export function syncNow() {
       if (mergedText !== stateText(local)) replaceState(merged, { silent: true });
       if (!remote || mergedText !== stateText(remote)) await upload(mergedText);
       write(syncedKey, Date.now());
+      write(summaryKey, { ...syncSummary(merged), received: changedKeys(local, merged), sent: changedKeys(remote, merged) });
       setStatus("idle");
       return true;
     } catch (error) {

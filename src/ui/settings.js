@@ -1,6 +1,6 @@
 import { METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
-import { fmtTime, t } from "../i18n.js";
+import { fmtMonth, fmtTime, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, parseNumber, toast } from "./dom.js";
 
@@ -9,8 +9,31 @@ function cloudHtml() {
   const s = cloudStatus();
   if (!s.connected) return `<p class="hint">${esc(t("notConnected"))}</p><div class="btn-row"><button class="btn" id="connect">${esc(t("connect"))}</button></div>`;
   const line = s.state === "syncing" ? t("syncing") : s.error ? t(s.error) : s.at ? t("syncedAt", { time: fmtTime(s.at) }) : "";
-  return `<p class="${s.error ? "warn" : "hint"}">${esc(line)}</p>
+  // A mark before the state, as in Garmin tool: turning while syncing, green when synced, red on a failure.
+  const kind = s.state === "syncing" ? "syncing" : s.error ? "error" : "ok";
+  const mark = { syncing: "↻", error: "!", ok: "✓" }[kind];
+  return `<p class="cloud-state is-${kind}"><span class="cloud-icon" aria-hidden="true">${mark}</span>${esc(line)}</p>
+    ${summaryHtml(s.summary)}
     <div class="btn-row"><button class="btn" id="sync">${esc(t("syncNow"))}</button><button class="btn danger" id="disconnect">${esc(t("disconnect"))}</button></div>`;
+}
+
+// What the last sync left the same everywhere: a tick for what is there, a dash for what is not, and what moved.
+function summaryHtml(summary) {
+  if (!summary) return "";
+  const items = METERS.map((m) => {
+    const info = summary.meters?.[m.id] ?? { count: 0 };
+    const detail = info.count ? t("syncCount", { count: info.count, month: fmtMonth(info.last) }) : t("syncNone");
+    return [t(`meter.${m.id}`), info.count > 0, detail];
+  });
+  items.push([t("syncConfig"), summary.config, ""]);
+  const list = items
+    .map(([label, set, detail]) => `<li class="${set ? "is-set" : ""}" title="${esc(t(set ? "itemSynced" : "itemNotSet"))}"><span class="cloud-tick" aria-hidden="true">${set ? "✓" : "–"}</span><span>${esc(label)}${detail ? ` <small>· ${esc(detail)}</small>` : ""}</span></li>`)
+    .join("");
+  const moved = (side) => (side?.readings ?? 0) + (side?.config ? 1 : 0);
+  const r = moved(summary.received);
+  const sent = moved(summary.sent);
+  const movedLine = r || sent ? t("syncMoved", { received: r, sent }) : t("syncNothing");
+  return `<ul class="cloud-items">${list}</ul><p class="hint">${esc(movedLine)}</p>`;
 }
 
 export function renderSettings(view, rerender) {
