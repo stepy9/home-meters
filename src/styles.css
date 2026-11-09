@@ -293,3 +293,36 @@ td small { display: block; font-size: 11px; }
 .form-actions .btn.primary { flex: 1; width: auto; }
 .icon-btn { width: 52px; padding: 0; display: grid; place-items: center; flex: none; }
 .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.month-picker { margin-top: 4px; }
+.mp-bar { display: flex; align-items: center; gap: 8px; }
+.mp-arrow {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.mp-arrow:disabled { opacity: 0.35; }
+.mp-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.mp-label {
+  flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-transform: capitalize;
+}
+.mp-label[aria-expanded="true"] { border-color: var(--accent); }
+.mp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.mp-panel { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); }
+.mp-year { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mp-year strong { font-size: 18px; }
+.mp-year .mp-arrow { width: 38px; height: 38px; background: var(--surface); }
+.mp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mp-month {
+  position: relative; min-height: 44px; border-radius: 10px; border: 1px solid transparent; background: var(--surface);
+  color: var(--text); font-size: 15px; font-weight: 600; text-transform: capitalize;
+}
+.mp-month:disabled { opacity: 0.3; }
+.mp-month.has-data::after {
+  content: ""; position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--good);
+}
+.mp-month.is-current { border-color: var(--accent); }
+.mp-month.is-selected { background: var(--accent); color: var(--on-accent); }
+.mp-month.is-selected.has-data::after { background: var(--on-accent); }
+.mp-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+.mp-link { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 8px 4px; min-height: 36px; }

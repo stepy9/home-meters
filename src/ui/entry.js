@@ -2,6 +2,7 @@ import { METERS, deleteReading, monthAdd, readingAt, readingBefore, readingsOf, 
 import { fmt, fmtMonth, t, unitLabel } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
+import { bindMonthPicker, monthPickerHtml } from "./month-picker.js";
 import { cssVar, esc, parseNumber, toast } from "./dom.js";
 
 const colorVar = { "el-vt": "--electricity", "el-nt": "--electricity-2", gas: "--gas", water: "--water" };
@@ -79,11 +80,13 @@ export function renderEntry(view) {
   const state = getState();
   const meters = activeMeters(state);
   const hasAny = meters.some((m) => readingAt(state, m.id, month));
+  // Months with any reading of an active meter, marked in the picker.
+  const marked = new Set(meters.flatMap((m) => readingsOf(state, m.id).map((r) => r.month)));
   view.innerHTML = `
     <form id="entry-form" novalidate>
       <section class="card">
-        <label class="field" for="month">${esc(t("month"))}</label>
-        <input type="month" id="month" value="${month}" required />
+        <span class="field">${esc(t("month"))}</span>
+        ${monthPickerHtml(month, marked)}
         <p class="hint">${esc(t("entryHint"))}</p>
       </section>
       ${meters.map((m) => meterCard(state, m)).join("")}
@@ -102,9 +105,8 @@ export function renderEntry(view) {
     const card = event.target.closest("[data-meter]");
     if (card) refreshCard(card);
   });
-  form.querySelector("#month").addEventListener("change", (event) => {
-    if (!event.target.value) return;
-    month = event.target.value;
+  bindMonthPicker(form, month, marked, (next) => {
+    month = next;
     renderEntry(view);
   });
   form.addEventListener("submit", (event) => {

@@ -95,6 +95,10 @@ const translations = {
     importDone: "Nahráno a sloučeno.",
     importFailed: "Soubor se nepodařilo načíst.",
     version: "Verze",
+    monthsLong: ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"],
+    prevMonth: "Předchozí měsíc",
+    nextMonth: "Další měsíc",
+    thisMonth: "Tento měsíc",
     months: ["led", "úno", "bře", "dub", "kvě", "čvn", "čvc", "srp", "zář", "říj", "lis", "pro"],
   },
   en: {
@@ -193,6 +197,10 @@ const translations = {
     importDone: "Uploaded and merged.",
     importFailed: "Could not read the file.",
     version: "Version",
+    monthsLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    thisMonth: "This month",
     months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   },
 };
