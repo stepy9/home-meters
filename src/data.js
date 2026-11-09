@@ -277,6 +277,8 @@ export const TARIFFS = [
   { id: "D57d", twoTariff: true },
   { id: "D61d", twoTariff: true },
 ];
+// Main circuit breaker sizes (electricity): the fixed monthly fee depends on it; kept with the rate for reference.
+export const BREAKERS = ["1×10 A", "1×16 A", "1×20 A", "1×25 A", "3×10 A", "3×16 A", "3×20 A", "3×25 A", "3×32 A", "3×40 A", "3×50 A", "3×63 A"];
 export const isTwoTariff = (id) => TARIFFS.find((x) => x.id === id)?.twoTariff ?? false;
 
 const money = (value) => (isNumber(value) && value >= 0 ? value : null);
@@ -292,6 +294,7 @@ export function cleanPrice(r, updatedAt) {
     supplierId: String(r.supplierId),
     from: r.from,
     tariff,
+    breaker: BREAKERS.includes(r.breaker) ? r.breaker : "",
     unit: money(r.unit),
     unitNt: isTwoTariff(tariff) ? money(r.unitNt) : null,
     // Water: the sewage charge (stočné) per m³ beside the water charge (vodné) in unit.

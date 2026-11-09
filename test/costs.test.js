@@ -65,6 +65,8 @@ test("advances against costs over the same months", () => {
 test("prices are cleaned, merged and round-trip", () => {
   const s = home();
   assert.equal(s.prices.g1.unitNt, null, "no LT price without a two-tariff rate");
+  assert.equal(setPrice(s, { id: "x", supplierId: "el", from: "2026-05", breaker: "3×25 A" }).prices.x.breaker, "3×25 A");
+  assert.equal(setPrice(s, { id: "x", supplierId: "el", from: "2026-05", breaker: "3×99 A" }).prices.x.breaker, "");
   assert.throws(() => setPrice(s, { supplierId: "el", from: "2026" }));
   const merged = mergeStates(s, deletePrice(s, "e2", 99));
   assert.equal(merged.prices.e2.deleted, true);

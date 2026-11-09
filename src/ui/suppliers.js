@@ -1,5 +1,6 @@
 import {
   CONTRACT_WARN_DAYS,
+  BREAKERS,
   SUPPLIED,
   TARIFFS,
   daysUntil,
@@ -48,6 +49,7 @@ export function priceSummary(commodity, p) {
   const parts = [];
   if (commodity === "electricity") {
     if (p.tariff) parts.push(p.tariff);
+    if (p.breaker) parts.push(p.breaker);
     if (p.unit != null) parts.push(p.unitNt != null ? `${t("short.el-vt")} ${kc(p.unit)} · ${t("short.el-nt")} ${kc(p.unitNt)}/kWh` : `${kc(p.unit)}/kWh`);
   } else if (commodity === "gas") {
     if (p.unit != null) parts.push(`${kc(p.unit)}/kWh`);
@@ -95,6 +97,8 @@ function priceFormHtml(supplier, p) {
       ? `
       <label class="field" for="pr-tariff">${esc(t("tariff"))}</label>
       <select id="pr-tariff" name="tariff"><option value="">–</option>${TARIFFS.map((x) => `<option value="${x.id}" ${x.id === tariff ? "selected" : ""}>${x.id} – ${esc(t(`tariff.${x.id}`))}</option>`).join("")}</select>
+      <label class="field" for="pr-breaker">${esc(t("breaker"))}</label>
+      <select id="pr-breaker" name="breaker"><option value="">–</option>${BREAKERS.map((x) => `<option value="${x}" ${x === (last?.breaker ?? "") ? "selected" : ""}>${x}</option>`).join("")}</select>
       <p class="warn" id="pr-nt-warn" hidden>${esc(t("tariffNtWarning"))}</p>
       ${numberField("unit", t("priceVt"), last?.unit, "Kč/kWh")}
       <div data-nt>${numberField("unitNt", t("priceNt"), last?.unitNt, "Kč/kWh")}</div>`
@@ -271,6 +275,7 @@ function bindPriceForm(root, rerender) {
       supplierId: supplier.id,
       from: `${data.get("fromYear")}-${data.get("fromMonth")}`,
       tariff: data.get("tariff") ?? "",
+      breaker: data.get("breaker") ?? "",
       ...values,
     };
     editingPrice = null;
