@@ -395,3 +395,9 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .weather-search input { flex: 1; min-height: 44px; font-size: 17px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
 .weather-place { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 0; }
 .place { display: block; width: 100%; text-align: left; min-height: 44px; padding: 8px 12px; margin-top: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.affects { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.upgrade-icons { display: flex; gap: 4px; }
+.upgrade-icons svg { width: 18px; height: 18px; }
+.upgrade-row { padding: 10px 0; border-top: 1px solid var(--border); }
+.upgrade-row:first-of-type { border-top: 0; }
+.upgrade-impact { margin-top: 4px; }

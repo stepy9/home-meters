@@ -7,6 +7,7 @@ import { reminderCalendar } from "../reminder.js";
 import { searchPlaces } from "../weather.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
+import { bindUpgrades, upgradesSettingsHtml } from "./upgrades.js";
 
 function cloudHtml() {
   if (!cloudAvailable()) return `<p class="warn">${esc(t("cloudMissingKey"))}</p>`;
@@ -71,6 +72,7 @@ export function renderSettings(view, rerender) {
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
     ${suppliersHtml()}
+    ${upgradesSettingsHtml()}
     <section class="card" id="weather">
       <h2>${esc(t("weatherTitle"))}</h2>
       <p class="hint">${esc(t("weatherSettingsHint"))}</p>
@@ -103,6 +105,7 @@ export function renderSettings(view, rerender) {
     <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>`;
 
   bindSuppliers(view, rerender);
+  bindUpgrades(view, rerender);
   view.querySelector("#weather-clear")?.addEventListener("click", () => update((s) => setConfig(s, { location: null })));
   view.querySelector("#weather-search").addEventListener("submit", async (event) => {
     event.preventDefault();

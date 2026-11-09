@@ -1,5 +1,5 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
+import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
 import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
@@ -9,6 +9,7 @@ import { currentMonth } from "./month-picker.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
 import { bindOffers, offersHtml } from "./offers.js";
+import { upgradesOverviewHtml } from "./upgrades.js";
 import { monthlyDegreeDays, perDegreeDays } from "../weather.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
@@ -84,8 +85,11 @@ const supplierMarks = (marks) => ({
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.font = `600 11px ${Chart.defaults.font.family}`;
-    for (const { index, name } of marks) {
-      const x = scales.x.getPixelForTick(index) - step / 2;
+    marks.forEach(({ index, name, color, after }, n) => {
+      // A supplier from the start of its month, an upgrade at the end of the month it was done in.
+      const x = scales.x.getPixelForTick(index) + (after ? step / 2 : -step / 2);
+      ctx.strokeStyle = color ?? cssVar("--text");
+      ctx.fillStyle = color ?? cssVar("--text");
       ctx.beginPath();
       ctx.moveTo(x, chartArea.top);
       ctx.lineTo(x, chartArea.bottom);
@@ -93,8 +97,9 @@ const supplierMarks = (marks) => ({
       // The name beside the line, kept inside the chart.
       const width = ctx.measureText(name).width;
       const left = x + 4 + width > chartArea.right ? x - 4 - width : x + 4;
-      ctx.fillText(name, left, chartArea.top + 10);
-    }
+      // Labels one under another, so marks close together stay readable.
+      ctx.fillText(name, left, chartArea.top + 10 + (n % 3) * 13);
+    });
     ctx.restore();
   },
 });
@@ -109,6 +114,9 @@ function yearChart(canvas, state, row) {
         .filter((s) => Number(s.from.slice(0, 4)) === ui.year)
         .map((s) => ({ index: Math.floor((Number(s.from.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: s.name }))
     : [];
+  // House upgrades in the shown year, in the commodity's color.
+  for (const u of upgradesOf(state, ui.commodity).filter((u) => Number(u.month.slice(0, 4)) === ui.year))
+    marks.push({ index: Math.floor((Number(u.month.slice(5)) - 1) / (ui.quarters ? 3 : 1)), name: u.name || t(`upgrade.${u.kind}`), color: cssVar(commodityColor[ui.commodity]), after: true });
   const datasets = split
     ? meters.map((m, i) => ({
         label: t(`short.${m.id}`),
@@ -126,7 +134,7 @@ function yearChart(canvas, state, row) {
         maintainAspectRatio: false,
         scales: { ...axis(), x: { stacked: split, grid: { display: false } }, y: { ...axis().y, stacked: split } },
         plugins: { legend: { display: split, position: "bottom" }, tooltip },
-        layout: { padding: { top: marks.length ? 14 : 0 } },
+        layout: { padding: { top: marks.length ? 14 + (Math.min(marks.length, 3) - 1) * 13 : 0 } },
       },
       plugins: [supplierMarks(marks)],
     }),
@@ -308,6 +316,14 @@ export function renderOverview(view) {
       }
     }
   }
+  let upgradeDd = null;
+  if (ui.commodity === "gas" && state.config.location && upgradesOf(state, "gas").length) {
+    const months = [...commodityConsumption(state, "gas").keys()].sort();
+    if (months.length) {
+      loadWeather(state.config.location, months[0], months.at(-1), () => renderOverview(view));
+      upgradeDd = weather.data;
+    }
+  }
   const { years, table } = byYear(consumption);
   const shown = ui.quarters ? new Map(years.map((y) => [y, toQuarters(table.get(y))])) : table;
   if (!years.includes(ui.year)) ui.year = years[0] ?? null;
@@ -351,6 +367,7 @@ export function renderOverview(view) {
       </section>`
         : weatherOn() ? "" : `<p class="empty">${esc(t(ui.money ? "noCosts" : "noData"))}</p>`
     }
+    ${ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)}
     ${ui.money ? offersHtml(ui.commodity) : ""}
     ${ui.money && missingPrices ? `<p class="hint center">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings">${esc(t("tabSettings"))}</a></p>` : ""}`;
 

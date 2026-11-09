@@ -4,7 +4,7 @@
 // Suppliers (electricity and gas) are records of their own, each valid from a month until the next one starts,
 // and each supplier has price periods of its own (prices change during a contract too).
 
-// Version 2 added suppliers and their prices. An app that only knows version 1 refuses version 2 data instead
+// Version 2 added suppliers, their prices, offers and house upgrades. An app that only knows version 1 refuses version 2 data instead
 // of syncing it and dropping them.
 export const DATA_VERSION = 2;
 // Every commodity has a supplier; water usually keeps the same one, electricity and gas can switch.
@@ -27,7 +27,7 @@ export const defaultConfig = () => ({
   location: null,
   updatedAt: 0,
 });
-export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, config: defaultConfig() });
+export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, upgrades: {}, config: defaultConfig() });
 
 export const readingKey = (meter, month) => `${meter}|${month}`;
 
@@ -82,6 +82,15 @@ export function normalizeState(raw) {
       if (offer) state.offers[id] = offer;
     }
   }
+  for (const [id, r] of Object.entries(raw.upgrades ?? {})) {
+    if (!r || r.id !== id) continue;
+    const updatedAt = isNumber(r.updatedAt) ? r.updatedAt : 0;
+    if (r.deleted) state.upgrades[id] = { id, deleted: true, updatedAt };
+    else {
+      const upgrade = cleanUpgrade(r, updatedAt);
+      if (upgrade) state.upgrades[id] = upgrade;
+    }
+  }
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
@@ -108,6 +117,7 @@ export function mergeStates(a, b) {
     suppliers: merge(a.suppliers, b.suppliers),
     prices: merge(a.prices, b.prices),
     offers: merge(a.offers, b.offers),
+    upgrades: merge(a.upgrades, b.upgrades),
     config,
   };
 }
@@ -116,7 +126,7 @@ export function mergeStates(a, b) {
 export function stateText(state) {
   const readings = Object.fromEntries(Object.keys(state.readings).sort().map((key) => [key, state.readings[key]]));
   const sorted = (o = {}) => Object.fromEntries(Object.keys(o).sort().map((id) => [id, o[id]]));
-  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), offers: sorted(state.offers), config: state.config }, null, 1);
+  return JSON.stringify({ version: DATA_VERSION, readings, suppliers: sorted(state.suppliers), prices: sorted(state.prices), offers: sorted(state.offers), upgrades: sorted(state.upgrades), config: state.config }, null, 1);
 }
 
 export function setReading(state, { meter, month, value, oldFinal, newStart }, now = Date.now()) {
@@ -237,7 +247,7 @@ export function syncSummary(state) {
 export function changedKeys(from, to) {
   const keys = Object.keys(to.readings).filter((k) => JSON.stringify(from?.readings[k]) !== JSON.stringify(to.readings[k]));
   const differ = (name) => Object.keys(to[name] ?? {}).filter((k) => JSON.stringify(from?.[name]?.[k]) !== JSON.stringify(to[name][k]));
-  const suppliers = [...differ("suppliers"), ...differ("prices"), ...differ("offers")];
+  const suppliers = [...differ("suppliers"), ...differ("prices"), ...differ("offers"), ...differ("upgrades")];
   const config = JSON.stringify(from?.config) !== JSON.stringify(to.config);
   return { readings: keys.length + suppliers.length, config };
 }
@@ -425,3 +435,51 @@ export const offersOf = (state, commodity) =>
   Object.values(state.offers ?? {})
     .filter((o) => !o.deleted && o.commodity === commodity)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+// Changes to the house (insulation, windows, a new boiler…): when, what it cost and which commodities it should
+// change, so consumption before and after can be compared.
+export const UPGRADE_KINDS = {
+  insulation: ["gas"],
+  windows: ["gas"],
+  roofWindows: ["gas"],
+  boiler: ["gas"],
+  heatPump: ["gas", "electricity"],
+  solar: ["electricity"],
+  waterHeater: ["electricity"],
+  appliance: ["electricity"],
+  waterSaving: ["water"],
+  other: [],
+};
+
+export function cleanUpgrade(r, updatedAt) {
+  if (!r.id || !isMonth(r.month) || !(r.kind in UPGRADE_KINDS)) return null;
+  return {
+    id: String(r.id),
+    month: r.month,
+    kind: r.kind,
+    name: text(r.name, 120),
+    cost: money(r.cost),
+    subsidy: money(r.subsidy),
+    company: text(r.company, 80),
+    affects: COMMODITIES.filter((c) => Array.isArray(r.affects) && r.affects.includes(c)),
+    note: text(r.note, 300),
+    updatedAt,
+  };
+}
+
+export function setUpgrade(state, fields, now = Date.now()) {
+  const id = fields.id || `u${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const upgrade = cleanUpgrade({ ...fields, id }, now);
+  if (!upgrade) throw new Error("invalid-upgrade");
+  return { ...state, upgrades: { ...state.upgrades, [id]: upgrade } };
+}
+
+export function deleteUpgrade(state, id, now = Date.now()) {
+  return { ...state, upgrades: { ...state.upgrades, [id]: { id, deleted: true, updatedAt: now } } };
+}
+
+// Newest first; with a commodity, only the upgrades that affect it.
+export const upgradesOf = (state, commodity) =>
+  Object.values(state.upgrades ?? {})
+    .filter((u) => !u.deleted && (!commodity || u.affects.includes(commodity)))
+    .sort((a, b) => b.month.localeCompare(a.month) || a.id.localeCompare(b.id));
