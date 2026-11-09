@@ -364,7 +364,7 @@ input[type="date"] { width: 100%; min-height: 44px; font-size: 17px; padding: 8p
 .price-row .hint { margin: 2px 0 0; }
 .price-title { margin: 12px 0 0; font-size: 15px; }
 .price-form .meter-input input { background: var(--surface); }
-.price-form select { background: var(--surface); }
+.price-form select { background-color: var(--surface); }
 .btn.small { min-height: 38px; padding: 6px 12px; margin-top: 8px; font-size: 14px; }
 .view-row + .view-row { margin-top: -4px; }
 small.muted { display: inline; color: var(--muted); font-size: 11px; }
@@ -384,7 +384,7 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 .offer-cost { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .offer-cost small { display: block; font-weight: 600; font-size: 12px; }
 .billing-end { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--muted); margin: 4px 0 6px; }
-.billing-end select { width: auto; min-height: 36px; font-size: 15px; padding: 4px 10px; }
+.billing-end select { width: 150px; flex: none; min-height: 38px; font-size: 16px; padding: 4px 30px 4px 12px; }
 .suggest { margin: 10px 0 0; font-weight: 600; font-size: 14px; }
 .stat .label::first-letter { text-transform: uppercase; }
 .notice.is-info { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -415,3 +415,12 @@ small.muted { display: inline; color: var(--muted); font-size: 11px; }
 /* Checkboxes side by side where they fit. */
 .checks { display: flex; flex-wrap: wrap; gap: 0 24px; }
 #gas-factor { max-width: 200px; }
+/* A chevron on every select, since the native arrow is turned off above. */
+select {
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%238a8f98' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 8px;
+  cursor: pointer;
+}
