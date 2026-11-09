@@ -374,17 +374,19 @@ export function renderOverview(view) {
   } else consumption = commodityConsumption(state, ui.commodity, { gasInKwh: ui.gasInKwh });
   // Gas against the weather: per 100 degree days, heating months only, once the weather is in.
   let weatherNote = "";
+  // With the weather in, the note goes into the chart card it explains.
+  let weatherInCard = "";
   if (weatherOn()) {
     const location = state.config.location;
     const months = [...consumption.keys()].sort();
-    if (!location) weatherNote = `<p class="hint center">${esc(t("weatherNoPlace"))} <a href="#settings" data-settings-section="house">${esc(t("tabSettings"))}</a></p>`;
+    if (!location) weatherNote = `<p class="info-note">${esc(t("weatherNoPlace"))} <a href="#settings" data-settings-section="house">${esc(t("tabSettings"))}</a></p>`;
     else if (months.length) {
       loadWeather(location, months[0], months.at(-1), () => renderOverview(view));
       if (weather.data) {
         consumption = perDegreeDays(consumption, weather.data);
-        weatherNote = `<p class="hint center">${esc(t("weatherHint", { place: location.name }))}</p>`;
+        weatherInCard = `<p class="hint chart-note">${esc(t("weatherHint", { place: location.name }))}</p>`;
       } else {
-        weatherNote = `<p class="hint center">${esc(weather.error ? t("weatherError", { error: weather.error }) : t("weatherLoading"))}</p>`;
+        weatherNote = `<p class="info-note">${esc(weather.error ? t("weatherError", { error: weather.error }) : t("weatherLoading"))}</p>`;
         consumption = new Map();
       }
     }
@@ -406,10 +408,11 @@ export function renderOverview(view) {
   const moneyToggle = `<div class="segmented">${[false, true].map((m) => `<button type="button" data-money="${m}" aria-pressed="${m === ui.money}">${esc(t(m ? "viewCosts" : "viewUsage"))}</button>`).join("")}</div>`;
   const gasToggle =
     ui.commodity === "gas" && !ui.money
-      ? `<div class="segmented">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div><div class="segmented"><button type="button" data-gas-weather aria-pressed="${ui.gasWeather}">${esc(t("weatherToggle"))}</button></div>`
+      ? `<div class="segmented">${["m3", "kWh"].map((u) => `<button type="button" data-gas-unit="${u}" aria-pressed="${(u === "kWh") === ui.gasInKwh}">${unitLabel(u)}</button>`).join("")}</div><button type="button" class="toggle-chip" data-gas-weather aria-pressed="${ui.gasWeather}"><span class="toggle-box" aria-hidden="true"></span>${esc(t("weatherToggle"))}</button>`
       : "";
   const periodToggle = `<div class="segmented">${[false, true].map((q) => `<button type="button" data-quarters="${q}" aria-pressed="${q === ui.quarters}">${esc(t(q ? "viewQuarters" : "viewMonths"))}</button>`).join("")}</div>`;
-  const unitToggle = `<div class="view-row">${moneyToggle}${periodToggle}</div>${gasToggle ? `<div class="view-row">${gasToggle}</div>` : ""}`;
+  // All the view switches in one toolbar: one row on a wide screen, wrapping on a phone.
+  const unitToggle = `<div class="toolbar">${moneyToggle}${periodToggle}${gasToggle}</div>`;
   const yearChips = (attr, isOn, color) =>
     `<div class="chips">${years.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
@@ -425,6 +428,7 @@ export function renderOverview(view) {
         ? `
       <section class="card">
         <h2>${esc(t(ui.money ? (ui.quarters ? "quarterCosts" : "yearCosts") : ui.quarters ? "quarterChart" : "yearChart"))}</h2>
+        ${weatherInCard}
         ${yearChips("data-year", (y) => y === ui.year, () => cssVar("--text"))}
         ${statsHtml(table, ui.year, state)}
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
