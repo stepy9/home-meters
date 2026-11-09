@@ -4,6 +4,7 @@ import { fmtMonth, fmtTime, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { esc, parseNumber, toast } from "./dom.js";
+import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 
 function cloudHtml() {
   if (!cloudAvailable()) return `<p class="warn">${esc(t("cloudMissingKey"))}</p>`;
@@ -26,6 +27,7 @@ function summaryHtml(summary) {
     const detail = info.count ? t("syncCount", { count: info.count, month: fmtMonth(info.last) }) : t("syncNone");
     return [t(`meter.${m.id}`), info.count > 0, detail];
   });
+  if (summary.suppliers != null) items.push([t("syncSuppliers"), summary.suppliers > 0, summary.suppliers ? String(summary.suppliers) : ""]);
   items.push([t("syncConfig"), summary.config, ""]);
   const list = items
     .map(([label, set, detail]) => `<li class="${set ? "is-set" : ""}" title="${esc(t(set ? "itemSynced" : "itemNotSet"))}"><span class="cloud-tick" aria-hidden="true">${set ? "✓" : "–"}</span><span>${esc(label)}${detail ? ` <small>· ${esc(detail)}</small>` : ""}</span></li>`)
@@ -56,6 +58,7 @@ export function renderSettings(view, rerender) {
       <input type="text" inputmode="decimal" id="gas-factor" value="${esc(state.config.gasKwhFactor)}" />
       <p class="hint">${esc(t("gasFactorHint"))}</p>
     </section>
+    ${suppliersHtml()}
     <section class="card">
       <h2>${esc(t("entrySettings"))}</h2>
       <label class="check"><input type="checkbox" id="bulk-enabled" ${bulkEnabled() ? "checked" : ""} />${esc(t("bulkEnabled"))}</label>
@@ -71,6 +74,7 @@ export function renderSettings(view, rerender) {
     </section>
     <p class="version">${esc(t("version"))} ${esc(appVersion)}</p>`;
 
+  bindSuppliers(view, rerender);
   view.querySelector("#connect")?.addEventListener("click", connectCloud);
   view.querySelector("#sync")?.addEventListener("click", syncNow);
   view.querySelector("#disconnect")?.addEventListener("click", () => {

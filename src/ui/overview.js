@@ -1,9 +1,11 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { COMMODITIES, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
-import { fmt, fmtPct, t, unitLabel } from "../i18n.js";
+import { COMMODITIES, SUPPLIED, supplierAt, suppliersOf, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
+import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
+import { currentMonth } from "./month-picker.js";
+import { contractHtml } from "./suppliers.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -45,9 +47,44 @@ const axis = () => ({
 });
 const tooltip = { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y == null ? "–" : `${fmt(ctx.parsed.y)} ${unitOf()}`}` } };
 
+// A dashed line before the month a supplier started in the shown year, with the supplier's name at the top.
+const supplierMarks = (marks) => ({
+  id: "supplierMarks",
+  afterDatasetsDraw(chart) {
+    if (!marks.length) return;
+    const { ctx, chartArea, scales } = chart;
+    const step = scales.x.getPixelForTick(1) - scales.x.getPixelForTick(0);
+    ctx.save();
+    ctx.strokeStyle = cssVar("--text");
+    ctx.fillStyle = cssVar("--text");
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.font = `600 11px ${Chart.defaults.font.family}`;
+    for (const { index, name } of marks) {
+      const x = scales.x.getPixelForTick(index) - step / 2;
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      // The name beside the line, kept inside the chart.
+      const width = ctx.measureText(name).width;
+      const left = x + 4 + width > chartArea.right ? x - 4 - width : x + 4;
+      ctx.fillText(name, left, chartArea.top + 10);
+    }
+    ctx.restore();
+  },
+});
+
 function yearChart(canvas, state, row) {
   const meters = metersOf(state, ui.commodity);
   const split = meters.length > 1;
+  // Supplier changes in the shown year (the very first supplier is not a change).
+  const marks = SUPPLIED.includes(ui.commodity)
+    ? suppliersOf(state, ui.commodity)
+        .slice(1)
+        .filter((s) => Number(s.from.slice(0, 4)) === ui.year)
+        .map((s) => ({ index: Number(s.from.slice(5)) - 1, name: s.name }))
+    : [];
   const datasets = split
     ? meters.map((m, i) => ({
         label: t(`short.${m.id}`),
@@ -65,7 +102,9 @@ function yearChart(canvas, state, row) {
         maintainAspectRatio: false,
         scales: { ...axis(), x: { stacked: split, grid: { display: false } }, y: { ...axis().y, stacked: split } },
         plugins: { legend: { display: split, position: "bottom" }, tooltip },
+        layout: { padding: { top: marks.length ? 14 : 0 } },
       },
+      plugins: [supplierMarks(marks)],
     }),
   );
 }
@@ -146,6 +185,22 @@ function statsHtml(table, year) {
   </div>`;
 }
 
+// The current supplier of electricity or gas, with the contract end; a hint to add one when there is none.
+function supplierCardHtml(state) {
+  if (!SUPPLIED.includes(ui.commodity)) return "";
+  const s = supplierAt(state, ui.commodity, currentMonth());
+  if (!s) return `<section class="card supplier-card"><p class="hint">${esc(t("supplierNone"))} <a href="#settings">${esc(t("tabSettings"))}</a></p></section>`;
+  const point = s.points[ui.commodity];
+  const details = [s.product, `${t("since")} ${fmtMonth(s.from)}`, point && `${ui.commodity === "gas" ? "EIC" : "EAN"} ${point}`].filter(Boolean).map(esc).join(" · ");
+  return `
+    <section class="card supplier-card">
+      <div class="hint">${esc(t("supplier"))}</div>
+      <strong class="supplier-name">${esc(s.name)}</strong>
+      <div class="hint">${details}</div>
+      ${contractHtml(s)}
+    </section>`;
+}
+
 export function renderOverview(view) {
   destroyCharts();
   chartDefaults();
@@ -166,6 +221,7 @@ export function renderOverview(view) {
   view.innerHTML = `
     <div class="segmented">${tabs}</div>
     ${unitToggle}
+    ${supplierCardHtml(state)}
     ${
       years.length
         ? `

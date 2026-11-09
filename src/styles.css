@@ -332,3 +332,21 @@ td small { display: block; font-size: 11px; }
 .meter-icon .c-icon { width: 18px; height: 18px; }
 .segmented button[data-commodity] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .segmented button[data-commodity] .c-icon { width: 18px; height: 18px; color: var(--c); }
+
+.supplier-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.supplier-icons { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.supplier-c { display: inline-grid; place-items: center; }
+.supplier-c .c-icon { width: 18px; height: 18px; }
+.supplier-main { flex: 1; min-width: 0; }
+.contract { display: inline-block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.contract-soon { color: var(--electricity); font-weight: 600; }
+.contract-past { color: var(--danger); font-weight: 600; }
+.supplier-form { margin-top: 8px; }
+.supplier-form textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); resize: vertical; }
+.check-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.check-row .check { gap: 8px; }
+.two-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+input[type="date"] { width: 100%; min-height: 44px; font-size: 17px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
+.supplier-card { padding: 12px 16px; }
+.supplier-name { display: block; font-size: 18px; margin: 2px 0; }
+.supplier-card a { color: var(--accent); font-weight: 600; }
