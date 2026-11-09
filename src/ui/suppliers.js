@@ -263,11 +263,13 @@ function groupHtml(state, commodity) {
 export function suppliersHtml() {
   const state = getState();
   return `
-    <section class="card" id="suppliers">
-      <h2>${esc(t("suppliers"))}</h2>
-      <p class="hint">${esc(t("suppliersHint"))}</p>
-      ${SUPPLIED.map((c) => groupHtml(state, c)).join("")}
-    </section>`;
+    <div id="suppliers" class="suppliers">
+      <section class="card">
+        <h2>${esc(t("suppliers"))}</h2>
+        <p class="hint">${esc(t("suppliersHint"))}</p>
+      </section>
+      ${SUPPLIED.map((c) => `<section class="card">${groupHtml(state, c)}</section>`).join("")}
+    </div>`;
 }
 
 const errorShower = (form, id) => {

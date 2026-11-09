@@ -23,6 +23,7 @@ function render() {
   document.getElementById("tabbar").innerHTML = Object.entries(tabs)
     .map(([id, key]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ""}>${icons[id]}<span>${t(key)}</span></a>`)
     .join("");
+  view.dataset.tab = tab;
   if (tab !== "overview") leaveOverview();
   // A screen that fails to draw says so instead of staying blank.
   try {
