@@ -28,8 +28,8 @@ export const defaultConfig = () => ({
   // How many months one bill covers (water is often billed every quarter).
   billingMonths: { electricity: 12, gas: 12, water: 12 },
   location: null,
-  // The house, for use per m² and per person: { area (m², heated), people }.
-  house: { area: null, people: null },
+  // The house, for use per m² and per person: { area (m², heated), people, children (of them under six) }.
+  house: { area: null, people: null, children: null },
   updatedAt: 0,
 });
 export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, upgrades: {}, bills: {}, config: defaultConfig() });
@@ -113,7 +113,7 @@ export function normalizeState(raw) {
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
   for (const k of SUPPLIED) if (BILLING_MONTHS.includes(c.billingMonths?.[k])) state.config.billingMonths[k] = c.billingMonths[k];
   const positive = (v) => (isNumber(v) && v > 0 ? v : null);
-  if (c.house) state.config.house = { area: positive(c.house.area), people: positive(c.house.people) };
+  if (c.house) state.config.house = { area: positive(c.house.area), people: positive(c.house.people), children: positive(c.house.children) };
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
 }

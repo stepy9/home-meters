@@ -107,6 +107,9 @@ export function renderSettings(view, rerender) {
         <div><label class="field" for="house-area">${esc(t("houseArea"))}</label><div class="meter-input"><input type="text" inputmode="decimal" id="house-area" value="${state.config.house?.area ?? ""}" /><span class="unit">m²</span></div></div>
         <div><label class="field" for="house-people">${esc(t("housePeople"))}</label><input type="text" inputmode="numeric" id="house-people" value="${state.config.house?.people ?? ""}" /></div>
       </div>
+      <label class="field" for="house-children">${esc(t("houseChildren"))}</label>
+      <input type="text" inputmode="numeric" id="house-children" class="short-input" value="${state.config.house?.children ?? ""}" />
+      <p class="hint">${esc(t("houseChildrenHint"))}</p>
     </section>
     ${upgradesSettingsHtml()}
     <section class="card" id="weather">
@@ -155,10 +158,10 @@ export function renderSettings(view, rerender) {
     }),
   );
   bindSuppliers(view, rerender);
-  for (const [id, key] of [["#house-area", "area"], ["#house-people", "people"]])
+  for (const [id, key] of [["#house-area", "area"], ["#house-people", "people"], ["#house-children", "children"]])
     view.querySelector(id).addEventListener("change", (e) => {
       const v = parseNumber(e.target.value);
-      if (Number.isNaN(v) || (v != null && v <= 0)) return toast(t("priceInvalid"));
+      if (Number.isNaN(v) || (v != null && v < 0)) return toast(t("priceInvalid"));
       update((s) => setConfig(s, { house: { [key]: v } }));
     });
   bindUpgrades(view, rerender);

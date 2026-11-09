@@ -28,6 +28,14 @@ function sameMonths(table, year) {
   return b > 0 ? { now: a, before: b, change: a / b - 1 } : null;
 }
 
+// Water without the summer (October–April, no garden) beside the summer months: what the garden adds.
+function waterSeasons(w) {
+  if (!w.winter || !w.summer) return "";
+  const extra = w.summer.litresPerDay / w.winter.litresPerDay - 1;
+  return `<div class="season-row"><span>${esc(t("waterWinter"))}</span><strong>${fmt(w.winter.litresPerDay, 0)} l</strong><span class="hint">${esc(t("bench.water", { pct: fmtPct(w.winter.litresPerDay / 89 - 1) }))}</span></div>
+    <div class="season-row"><span>${esc(t("waterSummer"))}</span><strong>${fmt(w.summer.litresPerDay, 0)} l</strong><span class="hint">${esc(t(Math.abs(extra) < 0.1 ? "waterSummerSame" : extra > 0 ? "waterSummerMore" : "waterSummerLess", { pct: fmtPct(extra) }))}</span></div>`;
+}
+
 function benchmarkHtml(state) {
   const { area, people } = state.config.house ?? {};
   if (!area && !people) return `<section class="card"><h2>${esc(t("benchTitle"))}</h2><p class="hint">${esc(t("benchNoHouse"))} <a href="#settings" data-settings-section="house">${esc(t("tabSettings"))}</a></p></section>`;
@@ -39,8 +47,9 @@ function benchmarkHtml(state) {
   if (b.electricity)
     rows.push(`<div class="bench-row"><span class="bench-icon" style="color:${color("electricity")}">${commodityIcon("electricity")}</span><div><strong>${fmt(b.electricity.perPerson, 0)} kWh ${esc(t("perPersonYear"))}</strong>${months(b.electricity.months)}<div class="hint">${esc(t("bench.electricity", { pct: fmtPct(b.electricity.ratio - 1) }))}</div></div></div>`);
   if (b.water)
-    rows.push(`<div class="bench-row"><span class="bench-icon" style="color:${color("water")}">${commodityIcon("water")}</span><div><strong>${fmt(b.water.litresPerDay, 0)} l ${esc(t("perPersonDay"))}</strong> <span class="hint">(${fmt(b.water.perPerson, 1)} m³ ${esc(t("perPersonYear"))})</span>${months(b.water.months)}<div class="hint">${esc(t("bench.water", { pct: fmtPct(b.water.ratio - 1) }))}</div></div></div>`);
-  const house = [area && `${fmt(area, 0)} m²`, people && t("benchPeople", { people })].filter(Boolean).join(" · ");
+    rows.push(`<div class="bench-row"><span class="bench-icon" style="color:${color("water")}">${commodityIcon("water")}</span><div><strong>${fmt(b.water.litresPerDay, 0)} l ${esc(t("perPersonDay"))}</strong> <span class="hint">(${fmt(b.water.perPerson, 1)} m³ ${esc(t("perPersonYear"))})</span>${months(b.water.months)}<div class="hint">${esc(t("bench.water", { pct: fmtPct(b.water.ratio - 1) }))}</div>${waterSeasons(b.water)}</div></div>`);
+  const children = state.config.house?.children;
+  const house = [area && `${fmt(area, 0)} m²`, people && t("benchPeople", { people }), children && t("benchChildren", { children })].filter(Boolean).join(" · ");
   return `<section class="card"><h2>${esc(t("benchTitle"))}</h2><p class="hint">${esc(t("benchHint", { house }))}</p>${rows.join("") || `<p class="hint">${esc(t("noData"))}</p>`}</section>`;
 }
 

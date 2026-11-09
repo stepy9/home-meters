@@ -50,8 +50,32 @@ export const GAS_CLASSES = [
 export const WATER_LITRES_PER_DAY = 89; // average per person in Czechia
 export const ELECTRICITY_PER_PERSON = 1000; // kWh a year, a household that does not heat with electricity
 
+// A small child (under six) uses about 70 % of what an adult does.
+export const CHILD_WEIGHT = 0.7;
+// Months without watering the garden: October to April.
+const WINTER = new Set(["10", "11", "12", "01", "02", "03", "04"]);
+
+// Water a day per person over the given months of the last year: { litresPerDay, months }.
+function waterPerDay(state, month, people, keep) {
+  const used = commodityConsumption(state, "water");
+  let total = 0;
+  let days = 0;
+  let months = 0;
+  for (let k = 0; k < 12; k++) {
+    const m = monthAdd(month, -k);
+    const row = used.get(m);
+    if (!row || !keep(m.slice(5))) continue;
+    total += row.total;
+    days += new Date(Number(m.slice(0, 4)), Number(m.slice(5)), 0).getDate();
+    months += 1;
+  }
+  return months ? { litresPerDay: (total * 1000) / days / people, months } : null;
+}
+
 export function benchmarks(state, month) {
-  const { area, people } = state.config.house ?? {};
+  const { area, children } = state.config.house ?? {};
+  // People as adults: small children count less.
+  const people = state.config.house?.people ? state.config.house.people - Math.min(children ?? 0, state.config.house.people) * (1 - CHILD_WEIGHT) : null;
   const use = lastYearUse(state, month);
   const out = {};
   if (use.gas.perYear != null && area) {
@@ -60,7 +84,9 @@ export function benchmarks(state, month) {
   }
   if (use.water.perYear != null && people) {
     const litres = (use.water.perYear * 1000) / 365 / people;
-    out.water = { perPerson: use.water.perYear / people, litresPerDay: litres, months: use.water.months, ratio: litres / WATER_LITRES_PER_DAY };
+    const winter = waterPerDay(state, month, people, (mm) => WINTER.has(mm));
+    const summer = waterPerDay(state, month, people, (mm) => !WINTER.has(mm));
+    out.water = { perPerson: use.water.perYear / people, litresPerDay: litres, months: use.water.months, ratio: litres / WATER_LITRES_PER_DAY, winter, summer };
   }
   if (use.electricity.perYear != null && people) {
     const perPerson = use.electricity.perYear / people;

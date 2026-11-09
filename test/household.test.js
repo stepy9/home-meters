@@ -65,3 +65,21 @@ test("CSV has a row per month with readings, use and costs", () => {
   assert.ok(lines[0].startsWith("Měsíc;Stav VT;Spotřeba elektřina (kWh)"));
   assert.equal(lines[2], "2026-02;1100,5;100,5;;;;503;;;503");
 });
+
+test("small children count as 0.7, and water splits into winter and summer", () => {
+  // Nov 2025 – Oct 2026: 6 m³ a month, but 12 m³ in May to September (watering).
+  const values = [];
+  for (let i = 0; i < 12; i++) {
+    const m = ((10 + i) % 12) + 1; // the month the use is for: 11, 12, 1, …, 10
+    values.push(m >= 5 && m <= 9 ? 12 : 6);
+  }
+  let s = series(emptyState(), "water", "2025-10", values);
+  s = setConfig(s, { house: { people: 3, children: 1 } });
+  const w = benchmarks(s, "2026-10").water;
+  const people = 3 - 0.3;
+  const winterDays = 30 + 31 + 31 + 28 + 31 + 30 + 31; // Nov–Apr and Oct
+  assert.ok(Math.abs(w.winter.litresPerDay - (7 * 6000) / winterDays / people) < 1e-9);
+  assert.equal(w.winter.months, 7);
+  assert.equal(w.summer.months, 5);
+  assert.ok(w.summer.litresPerDay > w.winter.litresPerDay * 1.9);
+});
