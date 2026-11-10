@@ -27,10 +27,10 @@ const saved = (() => {
 })();
 // money: costs in Kč instead of consumption.
 // quarters: charts and table by quarter instead of by month.
-const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, gasWeather: saved.gasWeather ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null, wide: new Set() };
-// Years a card shows unless it is maximized: older ones only crowd the chart and the table.
+const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, gasWeather: saved.gasWeather ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null, open: null };
+// Years a card shows on the page: older ones only crowd the chart and the table. The maximized card (a modal) shows all.
 const RECENT_YEARS = 5;
-const yearsOf = (years, card) => (ui.wide.has(card) ? years : years.slice(0, RECENT_YEARS));
+const recent = (years) => years.slice(0, RECENT_YEARS);
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 const periodLabels = () => (ui.quarters ? QUARTERS : t("months"));
 const remember = () => {
@@ -174,8 +174,8 @@ function yearChart(canvas, state, row) {
   );
 }
 
-function compareChart(canvas, years, table) {
-  const shown = yearsOf(years, "compare").filter((y) => ui.compared.has(y));
+function compareChart(canvas, years, table, list = recent(years), key = "compare") {
+  const shown = list.filter((y) => ui.compared.has(y));
   charts.push(
     new Chart(canvas, {
       type: "line",
@@ -195,7 +195,7 @@ function compareChart(canvas, years, table) {
         })),
       },
       options: {
-        ...motion("compare"),
+        ...motion(key),
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: axis(),
@@ -240,8 +240,7 @@ function priceChart(canvas, state) {
   );
 }
 
-function tableHtml(years, table) {
-  const cols = yearsOf(years, "table");
+function tableHtml(years, table, cols = recent(years)) {
   const head = cols.map((y) => `<th>${y}</th>`).join("");
   const cell = (row, i, y) => {
     const cur = row[i];
@@ -432,12 +431,20 @@ export function renderOverview(view) {
   const yearChips = (attr, isOn, color, list = years) =>
     `<div class="chips">${list.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
-  // A heading with a maximize button: full width, a taller chart and all the years.
-  const cardHead = (title, card) => {
-    const on = ui.wide.has(card);
-    const label = esc(t(on ? "collapseCard" : "expandCard"));
-    const btn = `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>`;
+  // A heading with a button: on the page it maximizes the card into a modal, in the modal it closes it.
+  const cardHead = (title, card, inModal = false) => {
+    const label = esc(t(inModal ? "collapseCard" : "expandCard"));
+    const btn = `<button type="button" class="card-max" ${inModal ? "data-close-modal" : `data-open="${card}"`} title="${label}" aria-label="${label}">${inModal ? "✕" : "⤢"}</button>`;
     return `<div class="card-head"><h2>${esc(t(title))}</h2>${btn}</div>`;
+  };
+  // The maximized card: all the years, over the whole page.
+  const modalHtml = () => {
+    if (!years.length || !ui.open) return "";
+    const body =
+      ui.open === "compare"
+        ? `${cardHead("compareChart", "compare", true)}${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y))}<div class="chart-box"><canvas id="compare-chart-all"></canvas></div>`
+        : `${cardHead("compareTable", "table", true)}${tableHtml(years, shown, years)}`;
+    return `<dialog class="card-modal"><div class="card">${body}</div></dialog>`;
   };
 
   view.innerHTML = `
@@ -460,12 +467,12 @@ export function renderOverview(view) {
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
         ${marksLegendHtml(chartMarks(state))}
       </section>
-      <section class="card${ui.wide.has("compare") ? " wide" : ""}">
+      <section class="card">
         ${cardHead("compareChart", "compare")}
-        ${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y), yearsOf(years, "compare"))}
+        ${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y), recent(years))}
         <div class="chart-box"><canvas id="compare-chart"></canvas></div>
       </section>
-      <section class="card${ui.wide.has("table") ? " wide" : ""}">
+      <section class="card">
         ${cardHead("compareTable", "table")}
         ${tableHtml(years, shown)}
       </section>`
@@ -475,11 +482,27 @@ export function renderOverview(view) {
     ${ui.money && SUPPLIED.includes(ui.commodity) ? billsHtml(state, ui.commodity) : ""}
     ${ui.money ? priceChartHtml(state) : ""}
     ${ui.money ? offersHtml(ui.commodity) : ""}
+    ${modalHtml()}
 `;
 
   if (years.length) {
     yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));
     compareChart(view.querySelector("#compare-chart"), years, shown);
+  }
+  const modal = view.querySelector(".card-modal");
+  if (modal) {
+    modal.showModal();
+    if (ui.open === "compare") compareChart(view.querySelector("#compare-chart-all"), years, shown, years, "compare-all");
+    // Esc, the close button or a click on the dimmed page around it.
+    modal.addEventListener("close", () => {
+      ui.open = null;
+      // The page shows the recent years only: keep those switched on, or start over.
+      const kept = [...ui.compared].filter((y) => recent(years).includes(y));
+      ui.compared = kept.length ? new Set(kept) : null;
+      rerender(view, "year", "price", "compare");
+    });
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.close(); });
+    modal.querySelector("[data-close-modal]").addEventListener("click", () => modal.close());
   }
 
   bindOffers(view, () => renderOverview(view));
@@ -520,14 +543,10 @@ export function renderOverview(view) {
       rerender(view, "compare", "price");
     }),
   );
-  view.querySelectorAll("[data-wide]").forEach((b) =>
+  view.querySelectorAll("[data-open]").forEach((b) =>
     b.addEventListener("click", () => {
-      const card = b.dataset.wide;
-      if (ui.wide.has(card)) ui.wide.delete(card);
-      else ui.wide.add(card);
-      // Back to the recent years only: years no longer offered are switched off too.
-      if (card === "compare" && !ui.wide.has(card)) ui.compared = null;
-      rerender(view, "year", "price", ...(card === "table" ? ["compare"] : []));
+      ui.open = b.dataset.open;
+      rerender(view, "year", "price", "compare");
     }),
   );
   view.querySelectorAll("[data-compare]").forEach((b) =>
@@ -535,7 +554,7 @@ export function renderOverview(view) {
       const y = Number(b.dataset.compare);
       if (ui.compared.has(y) && ui.compared.size > 1) ui.compared.delete(y);
       else ui.compared.add(y);
-      rerender(view, "year", "price");
+      rerender(view, "year", "price", ...(ui.open ? ["compare"] : []));
     }),
   );
 }
