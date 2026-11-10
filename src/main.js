@@ -32,6 +32,10 @@ function writeDrafts(drafts) {
   }
 }
 
+// Set by Vite from vite.config.js; a dev server started without it still shows the page.
+const appVersion = typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__;
+const lockIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
 function render() {
   const tab = currentTab();
   renderControls();
@@ -43,6 +47,8 @@ function render() {
     .join("");
   document.getElementById("tabbar").innerHTML = links;
   document.getElementById("topnav").innerHTML = links;
+  // What the app does, where the data stays and the version: on a wide screen only, a phone has the bottom bar there.
+  document.getElementById("footer").innerHTML = `<span>${t("footerAbout")}</span><span class="privacy">${lockIcon}<span>${t("footerPrivacy")}</span></span><span class="app-version">${t("version")} ${appVersion}</span>`;
   // What is typed in an open form survives a redraw (after a sync on coming back to the app, say): the values
   // are read before and put back into the same fields after, as long as the form is still open.
   const drafts = tab !== "entry" && view.dataset.tab === tab ? readDrafts() : null;
