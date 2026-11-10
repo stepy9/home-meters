@@ -63,6 +63,7 @@ function refreshCard(card) {
   const used = prev && Number.isFinite(reading.value) && (reading.oldFinal == null || Number.isFinite(reading.oldFinal)) ? usedBetween(prev, reading) : null;
   card.querySelector(".used").textContent = used == null ? "" : t("usedSince", { value: `${fmt(used, 3)} ${unitLabel(meter.unit)}` });
   card.querySelector(".warn").hidden = !(used != null && used < 0);
+  card.dataset.invalid = (used != null && used < 0) || Number.isNaN(reading.value) || Number.isNaN(reading.oldFinal) ? "1" : "";
   // Well above or far below the usual use: a leak, or a digit too many or missing.
   const check = used != null ? checkReading(state, reading) : null;
   const unusual = card.querySelector(".unusual");
@@ -112,10 +113,15 @@ export function renderEntry(view) {
 
   if (bulkEnabled()) bindBulk(view);
   const form = view.querySelector("#entry-form");
+  // Saving waits until no card holds a reading below the last one (without a swap) or a value that is not a number.
+  const submit = form.querySelector('[type="submit"]');
+  const refreshSubmit = () => (submit.disabled = [...form.querySelectorAll("[data-meter]")].some((c) => c.dataset.invalid));
   form.querySelectorAll("[data-meter]").forEach(refreshCard);
+  refreshSubmit();
   form.addEventListener("input", (event) => {
     const card = event.target.closest("[data-meter]");
     if (card) refreshCard(card);
+    refreshSubmit();
   });
   bindMonthPicker(form, month, marked, (next) => {
     month = next;
@@ -126,7 +132,7 @@ export function renderEntry(view) {
     document.activeElement?.blur();
     const readings = [...form.querySelectorAll("[data-meter]")].map(cardReading).filter((r) => r.value != null);
     if (!readings.length) return toast(t("nothingToSave"));
-    if (readings.some((r) => Number.isNaN(r.value) || Number.isNaN(r.oldFinal) || Number.isNaN(r.newStart))) return;
+    if (submit.disabled || readings.some((r) => Number.isNaN(r.value) || Number.isNaN(r.oldFinal) || Number.isNaN(r.newStart))) return;
     update((s) => readings.reduce((acc, r) => setReading(acc, r), s));
     toast(t("saved"));
   });
