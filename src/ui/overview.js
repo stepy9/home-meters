@@ -101,7 +101,7 @@ const supplierMarks = (marks) => ({
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.font = `600 11px ${Chart.defaults.font.family}`;
-    marks.forEach(({ index, name, color, after }, n) => {
+    marks.forEach(({ index, color, after }, n) => {
       // A supplier from the start of its month, an upgrade at the end of the month it was done in.
       const x = scales.x.getPixelForTick(index) + (after ? step / 2 : -step / 2);
       ctx.strokeStyle = color ?? cssVar("--text");
