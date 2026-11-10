@@ -771,3 +771,4 @@ export const fmtDate = (date) => new Intl.DateTimeFormat(locale(), { day: "numer
 export const fmtMonth = (month) => `${t("months")[Number(month.slice(5)) - 1]} ${month.slice(0, 4)}`;
 export const fmtTime = (ms) => new Intl.DateTimeFormat(locale(), { dateStyle: "short", timeStyle: "short" }).format(ms);
 export const unitLabel = (unit) => (unit === "m3" ? "m³" : unit);
+export const fmtMonthLong = (month) => `${t("monthsLong")[Number(month.slice(5)) - 1]} ${month.slice(0, 4)}`;

@@ -1,6 +1,6 @@
 import { METERS, deleteReading, monthAdd, readingAt, readingBefore, readingsOf, setReading, usedBetween } from "../data.js";
 import { checkReading } from "../anomalies.js";
-import { fmt, fmtMonth, t, unitLabel } from "../i18n.js";
+import { fmt, fmtMonth, fmtMonthLong, t, unitLabel } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
 import { bindMonthPicker, monthPickerHtml } from "./month-picker.js";
@@ -111,7 +111,7 @@ export function renderEntry(view) {
       ${meters.map((m) => meterCard(state, m)).join("")}
       <div class="form-actions">
         ${hasAny ? `<button class="btn danger icon-btn" type="button" id="delete-month" title="${esc(t("delete"))} ${esc(fmtMonth(month))}" aria-label="${esc(t("delete"))} ${esc(fmtMonth(month))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ""}
-        <button class="btn primary" type="submit">${esc(t("save"))} ${esc(fmtMonth(month))}</button>
+        <button class="btn primary" type="submit">${esc(t("save"))} ${esc(fmtMonthLong(month))}</button>
       </div>
     </form>
     ${bulkEnabled() ? bulkHtml() : ""}
