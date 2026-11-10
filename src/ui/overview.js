@@ -357,14 +357,6 @@ function supplierCardHtml(state) {
 function renderHousehold(view, state) {
   const tabs = [...COMMODITIES, "home"].map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c] ?? "--accent")}">${commodityIcon(c)}<span>${esc(t(c === "home" ? "householdTab" : c))}</span></button>`).join("");
   const { html, row } = householdHtml(state);
-  // A heading with a maximize button, offered only when there are more years than the card shows by default.
-  const cardHead = (title, card) => {
-    const on = ui.wide.has(card);
-    const label = esc(t(on ? "collapseCard" : "expandCard"));
-    const btn = years.length > RECENT_YEARS || on ? `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>` : "";
-    return `<div class="card-head"><h2>${esc(t(title))}</h2>${btn}</div>`;
-  };
-
   view.innerHTML = `${noticesHtml()}<div class="segmented">${tabs}</div>${html}`;
   drawHousehold(view, charts, row, () => renderOverview(view));
   bindTabs(view);
@@ -439,6 +431,14 @@ export function renderOverview(view) {
   const unitToggle = `<div class="toolbar">${moneyToggle}${periodToggle}${gasToggle}</div>`;
   const yearChips = (attr, isOn, color, list = years) =>
     `<div class="chips">${list.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
+
+  // A heading with a maximize button, offered only when there are more years than the card shows by default.
+  const cardHead = (title, card) => {
+    const on = ui.wide.has(card);
+    const label = esc(t(on ? "collapseCard" : "expandCard"));
+    const btn = years.length > RECENT_YEARS || on ? `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>` : "";
+    return `<div class="card-head"><h2>${esc(t(title))}</h2>${btn}</div>`;
+  };
 
   view.innerHTML = `
     ${noticesHtml()}
