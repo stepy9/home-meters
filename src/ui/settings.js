@@ -7,6 +7,8 @@ import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { reminderCalendar } from "../reminder.js";
 import { searchPlaces } from "../weather.js";
 import { csvExport } from "../household.js";
+import { reportYears } from "../report.js";
+import { printReport } from "./report.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 import { bindUpgrades, upgradesSettingsHtml } from "./upgrades.js";
@@ -202,6 +204,14 @@ export function renderSettings(view, rerender) {
       <ul class="layout-list" id="layout-list">${layoutRowsHtml()}</ul>
       <button type="button" class="mp-link" id="layout-reset">${esc(t("layoutReset"))}</button>
     </section>
+    ${reportYears(state).length ? `<section class="card">
+      <h2>${esc(t("reportCard"))}</h2>
+      <p class="hint">${esc(t("reportHint"))}</p>
+      <div class="btn-row">
+        <select id="report-year" class="short-input" aria-label="${esc(t("reportYear"))}">${reportYears(state).map((y) => `<option>${y}</option>`).join("")}</select>
+        <button class="btn" id="report-print">${esc(t("reportPrint"))}</button>
+      </div>
+    </section>` : ""}
     <section class="card">
       <h2>${esc(t("backup"))}</h2>
       <div class="btn-row">
@@ -301,6 +311,7 @@ export function renderSettings(view, rerender) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
+  view.querySelector("#report-print")?.addEventListener("click", () => printReport(Number(view.querySelector("#report-year").value)));
   view.querySelector("#export").addEventListener("click", () => {
     const blob = new Blob([stateText(getState())], { type: "application/json" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `home-meters-${new Date().toISOString().slice(0, 10)}.json` });

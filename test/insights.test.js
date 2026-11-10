@@ -60,3 +60,15 @@ test("suggested goals: the last twelve months, rounded; too little data suggests
   assert.deepEqual(suggestGoals(s), { water: { usage: 125 } });
   assert.deepEqual(suggestGoals(series(emptyState(), "water", "2025-01", Array(11).fill(10))), {});
 });
+
+test("yearly report: totals, the year before and household costs per month", async () => {
+  const { yearReport, reportYears } = await import("../src/report.js");
+  const s = series(emptyState(), "water", "2024-12", Array(24).fill(10));
+  assert.deepEqual(reportYears(s), [2026, 2025]);
+  const r = yearReport(s, 2026);
+  assert.equal(r.commodities.length, 1);
+  assert.equal(r.commodities[0].totals.usage, 120);
+  assert.equal(r.commodities[0].totals.prevUsage, 120);
+  assert.equal(r.costs.every((c) => c == null), true);
+  assert.equal(yearReport(s, 2020).commodities.length, 0);
+});
