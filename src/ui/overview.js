@@ -41,6 +41,14 @@ const remember = () => {
 
 const charts = [];
 const destroyCharts = () => charts.splice(0).forEach((c) => c.destroy());
+// The view is rebuilt on every switch; charts the switch did not touch are redrawn without the animation, so they stay put.
+let still = new Set();
+const motion = (chart) => (still.has(chart) ? { animation: false } : {});
+const rerender = (view, ...untouched) => {
+  still = new Set(untouched);
+  renderOverview(view);
+  still = new Set();
+};
 
 const commodityColor = { electricity: "--electricity", gas: "--gas", water: "--water" };
 // Years by how recent they are: blue, orange, green, magenta, gold, teal, so the newest few always contrast most.
@@ -155,6 +163,7 @@ function yearChart(canvas, state, row) {
       type: "bar",
       data: { labels: periodLabels(), datasets },
       options: {
+        ...motion("year"),
         maintainAspectRatio: false,
         scales: { ...axis(), x: { stacked: split, grid: { display: false } }, y: { ...axis().y, stacked: split } },
         plugins: { legend: { display: split, position: "bottom" }, tooltip },
@@ -186,6 +195,7 @@ function compareChart(canvas, years, table) {
         })),
       },
       options: {
+        ...motion("compare"),
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: axis(),
@@ -220,6 +230,7 @@ function priceChart(canvas, state) {
       type: "line",
       data: { labels: h.months.map((m) => `${t("months")[Number(m.slice(5)) - 1]} ${m.slice(2, 4)}`), datasets },
       options: {
+        ...motion("price"),
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } }, y: { beginAtZero: true, ticks: { callback: (v) => fmt(v, 2) } } },
@@ -506,7 +517,7 @@ export function renderOverview(view) {
   view.querySelectorAll("[data-year]").forEach((b) =>
     b.addEventListener("click", () => {
       ui.year = Number(b.dataset.year);
-      renderOverview(view);
+      rerender(view, "compare", "price");
     }),
   );
   view.querySelectorAll("[data-wide]").forEach((b) =>
@@ -516,7 +527,7 @@ export function renderOverview(view) {
       else ui.wide.add(card);
       // Back to the recent years only: years no longer offered are switched off too.
       if (card === "compare" && !ui.wide.has(card)) ui.compared = null;
-      renderOverview(view);
+      rerender(view, "year", "price", ...(card === "table" ? ["compare"] : []));
     }),
   );
   view.querySelectorAll("[data-compare]").forEach((b) =>
@@ -524,7 +535,7 @@ export function renderOverview(view) {
       const y = Number(b.dataset.compare);
       if (ui.compared.has(y) && ui.compared.size > 1) ui.compared.delete(y);
       else ui.compared.add(y);
-      renderOverview(view);
+      rerender(view, "year", "price");
     }),
   );
 }
