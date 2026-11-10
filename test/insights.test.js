@@ -53,3 +53,10 @@ test("emissions of a year: electricity by its factor, gas by kWh", () => {
   assert.equal(emissions(setConfig(s, { co2Electricity: 0.1 }), 2026).electricity, 20);
   assert.equal(emissions(s, 2020), null);
 });
+
+test("suggested goals: the last twelve months, rounded; too little data suggests nothing", async () => {
+  const { suggestGoals } = await import("../src/insights.js");
+  const s = series(emptyState(), "water", "2025-01", Array(13).fill(10.4));
+  assert.deepEqual(suggestGoals(s), { water: { usage: 125 } });
+  assert.deepEqual(suggestGoals(series(emptyState(), "water", "2025-01", Array(11).fill(10))), {});
+});

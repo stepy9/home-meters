@@ -1,4 +1,4 @@
-import { DEFAULT_ELECTRICITY_CO2 } from "../insights.js";
+import { DEFAULT_ELECTRICITY_CO2, suggestGoals } from "../insights.js";
 import { COMMODITIES, CURRENCIES, METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
 import { cur, fmtMonth, fmtTime, lang, t } from "../i18n.js";
@@ -146,6 +146,8 @@ export function renderSettings(view, rerender) {
     <section class="card">
       <h2>${esc(t("goalsTitle"))}</h2>
       <p class="hint">${esc(t("goalsHint"))}</p>
+      <div class="btn-row"><button type="button" class="btn" id="goals-suggest">${esc(t("goalsSuggest"))}</button></div>
+      <p class="hint">${esc(t("goalsSuggestHint"))}</p>
       ${COMMODITIES.map((k) => `
         <span class="field">${esc(t(k))}</span>
         <div class="two-cols">
@@ -261,6 +263,17 @@ export function renderSettings(view, rerender) {
     const value = parseNumber(event.target.value);
     if (value > 0) update((s) => setConfig(s, { gasKwhFactor: value }));
     else event.target.value = getState().config.gasKwhFactor;
+  });
+  view.querySelector("#goals-suggest").addEventListener("click", () => {
+    const state = getState();
+    const suggested = suggestGoals(state);
+    if (!Object.keys(suggested).length) return toast(t("goalsSuggestNone"));
+    // Goals already set are replaced only when confirmed.
+    const overwrite = Object.entries(suggested).some(([k, g]) => Object.entries(g).some(([kind, v]) => state.config.goals?.[k]?.[kind] && state.config.goals[k][kind] !== v));
+    const keep = overwrite && !confirm(t("goalsSuggestConfirm"));
+    const goals = Object.fromEntries(Object.entries(suggested).map(([k, g]) => [k, Object.fromEntries(Object.entries(g).filter(([kind]) => !keep || !state.config.goals?.[k]?.[kind]))]));
+    update((s) => setConfig(s, { goals }));
+    toast(t("goalsSuggested"));
   });
   // An empty goal or factor clears it.
   view.querySelectorAll("[data-goal]").forEach((input) =>

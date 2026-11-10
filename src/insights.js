@@ -1,6 +1,6 @@
 // A year's goal, the electricity drawn all the time, and the carbon a year's electricity and gas emitted.
 import { commodityCosts } from "./costs.js";
-import { byYear, commodityConsumption, monthAdd, projectYear } from "./data.js";
+import { COMMODITIES, byYear, commodityConsumption, monthAdd, projectYear } from "./data.js";
 
 // kg CO2 per kWh of natural gas burnt (IPCC: 56.1 kg per GJ).
 export const GAS_CO2 = 0.202;
@@ -59,4 +59,26 @@ export function emissions(state, year) {
   const gasKg = gas == null ? null : gas * GAS_CO2;
   if (electricity == null && gasKg == null) return null;
   return { electricity, gas: gasKg, total: (electricity ?? 0) + (gasKg ?? 0) };
+}
+
+const roundTo = (value, step) => Math.round(value / step) * step;
+const STEP = { usage: { electricity: 10, gas: 10, water: 1 }, cost: { electricity: 100, gas: 100, water: 100 } };
+
+// Goals from the data: per commodity the use and costs of the last twelve months known, rounded. A commodity or
+// kind without twelve months in a row (or without prices, for costs) is left out. { electricity: { usage, cost } }.
+export function suggestGoals(state) {
+  const out = {};
+  for (const commodity of COMMODITIES) {
+    for (const kind of ["usage", "cost"]) {
+      const source = kind === "cost" ? commodityCosts(state, commodity) : commodityConsumption(state, commodity);
+      const months = [...source.keys()].filter((m) => source.get(m)).sort();
+      const last = months.at(-1);
+      if (!last) continue;
+      const year = Array.from({ length: 12 }, (_, i) => source.get(monthAdd(last, -i)));
+      if (!year.every(Boolean)) continue;
+      const total = year.reduce((s, r) => s + r.total, 0);
+      if (total > 0) (out[commodity] ??= {})[kind] = roundTo(total, STEP[kind][commodity]);
+    }
+  }
+  return out;
 }
