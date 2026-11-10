@@ -95,6 +95,16 @@ const dateSelects = (prefix, date, { optional = false, years }) => {
   </div>`;
 };
 
+// Common fixed-price lengths; a click fills the end as the day before the start plus that many months.
+const FIX_MONTHS = [12, 24, 36];
+
+// The last day of a fixation of n months from start ("2024-10-15", 24 → "2026-10-14").
+export function fixationEnd(start, n) {
+  const [y, m, d] = start.split("-").map(Number);
+  const end = new Date(y, m - 1 + n, d - 1);
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+}
+
 // The date picked in such selects: "" when all are empty, null when only some are or it does not exist (31 February).
 function readDate(data, prefix) {
   const [d, m, y] = ["Day", "Month", "Year"].map((k) => data.get(prefix + k) ?? "");
@@ -226,6 +236,7 @@ function formHtml(commodity, s) {
       <input type="text" id="sup-product" name="product" value="${esc(s?.product ?? "")}" />
       <label class="field">${esc(t("contractEndOptional"))}</label>
       ${dateSelects("end", s?.contractEnd, { optional: true, years: range(thisYear() - 10, thisYear() + 6) })}
+      <div class="btn-row fix-months">${FIX_MONTHS.map((n) => `<button type="button" class="btn small" data-fix-months="${n}">${esc(t("fixMonths", { n }))}</button>`).join("")}</div>
       <p class="hint">${esc(t("contractEndHint"))}</p>
       <label class="field" for="sup-remind">${esc(t("remindBefore"))}</label>
       <select id="sup-remind" name="remindMonths">${REMIND_MONTHS.map((n) => `<option value="${n}" ${n === (s?.remindMonths ?? DEFAULT_REMIND_MONTHS) ? "selected" : ""}>${esc(t(n === 1 ? "remindMonth" : n < 5 ? "remindMonthsFew" : "remindMonthsMany", { n }))}</option>`).join("")}</select>
@@ -380,6 +391,22 @@ export function bindSuppliers(root, rerender) {
     editing = null;
     rerender();
   });
+  form.querySelectorAll("[data-fix-months]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const show = errorShower(form, "#sup-error");
+      const start = readDate(new FormData(form), "start");
+      if (!start) return show("contractStartInvalid");
+      const [y, m, d] = fixationEnd(start, Number(b.dataset.fixMonths)).split("-");
+      const set = (name, value) => {
+        const select = form.querySelector(`[name="${name}"]`);
+        if (![...select.options].some((o) => o.value === value)) select.add(new Option(value, value));
+        select.value = value;
+      };
+      set("endDay", d);
+      set("endMonth", m);
+      set("endYear", y);
+    }),
+  );
   form.querySelector("#sup-delete")?.addEventListener("click", () => {
     const s = getState().suppliers[editing.id];
     if (!confirm(t("supplierDeleteConfirm", { name: s.name }))) return;
