@@ -127,7 +127,22 @@ const numberField = (name, label, value, unit) => `
   <div class="price-field">
     <label class="field" for="pr-${name}">${esc(label)}</label>
     <div class="meter-input"><input type="text" inputmode="decimal" id="pr-${name}" name="${name}" value="${value == null ? "" : esc(String(value).replace(".", ","))}" /><span class="unit">${esc(unit)}</span></div>
+    ${unit === "Kč/kWh" ? `<p class="hint" data-mwh="${name}"></p>` : ""}
   </div>`;
+
+// Price lists quote Kč/MWh: the price typed per kWh shown per MWh too, to check it against the list.
+function bindMwh(form) {
+  const fmt = new Intl.NumberFormat(lang === "cs" ? "cs-CZ" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  form.querySelectorAll("[data-mwh]").forEach((out) => {
+    const input = form.querySelector(`#pr-${out.dataset.mwh}`);
+    const sync = () => {
+      const v = parseNumber(input.value);
+      out.textContent = v == null || Number.isNaN(v) ? "" : `= ${fmt.format(v * 1000)} Kč/MWh`;
+    };
+    sync();
+    input.addEventListener("input", sync);
+  });
+}
 
 function priceFormHtml(supplier, p) {
   const c = supplier.commodity;
@@ -309,6 +324,7 @@ function bindPriceForm(root, rerender) {
     form.querySelector("#pr-nt-warn").hidden = !(two && !getState().config.active["el-nt"]);
   };
   syncTariff();
+  bindMwh(form);
   tariffSelect?.addEventListener("change", syncTariff);
   form.querySelector("#pr-cancel").addEventListener("click", () => {
     editingPrice = null;
