@@ -36,6 +36,10 @@ export const defaultConfig = () => ({
   location: null,
   // The house, for use per m² and per person: { area (m², heated), people, children (of them under six) }.
   house: { area: null, people: null, children: null },
+  // A yearly goal per commodity: use (gas in m³) and costs, each null when not set.
+  goals: { electricity: { usage: null, cost: null }, gas: { usage: null, cost: null }, water: { usage: null, cost: null } },
+  // kg CO2 per kWh of electricity; null takes the default.
+  co2Electricity: null,
   updatedAt: 0,
 });
 export const emptyState = () => ({ version: DATA_VERSION, readings: {}, suppliers: {}, prices: {}, offers: {}, upgrades: {}, bills: {}, config: defaultConfig() });
@@ -122,6 +126,8 @@ export function normalizeState(raw) {
   for (const k of SUPPLIED) if (typeof c.billingSkipsAdvance?.[k] === "boolean") state.config.billingSkipsAdvance[k] = c.billingSkipsAdvance[k];
   const positive = (v) => (isNumber(v) && v > 0 ? v : null);
   if (c.house) state.config.house = { area: positive(c.house.area), people: positive(c.house.people), children: positive(c.house.children) };
+  for (const k of COMMODITIES) state.config.goals[k] = { usage: positive(c.goals?.[k]?.usage), cost: positive(c.goals?.[k]?.cost) };
+  state.config.co2Electricity = positive(c.co2Electricity);
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
   return state;
 }
@@ -171,6 +177,7 @@ export function setConfig(state, changes, now = Date.now()) {
   config.billingMonths = { ...state.config.billingMonths, ...changes.billingMonths };
   config.billingSkipsAdvance = { ...state.config.billingSkipsAdvance, ...changes.billingSkipsAdvance };
   config.house = { ...state.config.house, ...changes.house };
+  config.goals = Object.fromEntries(COMMODITIES.map((k) => [k, { ...state.config.goals?.[k], ...changes.goals?.[k] }]));
   return { ...state, config: { ...config, updatedAt: now } };
 }
 

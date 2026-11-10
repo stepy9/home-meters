@@ -6,6 +6,7 @@ import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
 import { advanceBalance, billingPeriod, commodityCosts, forecastBilling } from "../costs.js";
 import { currentMonth } from "./month-picker.js";
+import { baseLoad, emissions, goalProgress } from "../insights.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
 import { bindOffers, offersHtml } from "./offers.js";
@@ -347,6 +348,38 @@ function forecastHtml(state) {
     </section>`;
 }
 
+// The selected year against its goal, the electricity drawn all the time and the year's emissions.
+function insightsHtml(state) {
+  const year = ui.year ?? Number(currentMonth().slice(0, 4));
+  const stat = (label, value, sub = "", cls = "") => `<div class="stat"><div class="label">${esc(label)}</div><div class="value ${cls}">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
+  const kind = ui.money ? "cost" : "usage";
+  const unit = ui.money ? cur() : ui.commodity === "electricity" ? "kWh" : "m³";
+  const parts = [];
+  const g = goalProgress(state, ui.commodity, kind, year);
+  if (g) {
+    const ahead = g.actual > g.expected;
+    const pct = Math.min(100, (g.actual / g.goal) * 100);
+    const mark = Math.min(100, (g.expected / g.goal) * 100);
+    parts.push(`<div class="goal">
+      <div class="goal-line"><span>${esc(t("goalLabel", { year }))}</span><strong>${fmt(g.actual, 0)} / ${fmt(g.goal, 0)} ${esc(unit)}</strong></div>
+      <div class="goal-bar ${ahead ? "up" : "down"}"><span style="width:${pct}%"></span><i style="left:${mark}%" title="${esc(t("goalExpected"))}"></i></div>
+      <p class="hint">${esc(t(ahead ? "goalOver" : "goalUnder", { diff: fmt(Math.abs(g.actual - g.expected), 0), unit }))}${g.projected != null && g.months < 12 ? " " + esc(t("goalProjected", { value: fmt(g.projected, 0), unit })) : ""}</p>
+    </div>`);
+  }
+  const stats = [];
+  if (ui.commodity === "electricity" && !ui.money) {
+    const last = year === Number(currentMonth().slice(0, 4)) ? currentMonth() : `${year}-12`;
+    const b = baseLoad(state, last);
+    if (b) stats.push(stat(t("baseLoad"), `~${fmt(b.watts, 0)} W`, esc(t("baseLoadSub", { kwh: fmt(b.kwhYear, 0), month: fmtMonth(b.month) }))));
+  }
+  const e = ui.commodity !== "water" ? emissions(state, year) : null;
+  const kg = e?.[ui.commodity];
+  if (kg != null) stats.push(stat(t("co2", { year }), `${fmt(kg / 1000, 2)} t`, esc(t("co2Sub", { total: fmt(e.total / 1000, 2) }))));
+  if (stats.length) parts.push(`<div class="stats">${stats.join("")}</div>`);
+  if (weatherOn()) return "";
+  return `<section class="card"><h2>${esc(t("insightsTitle", { year }))}</h2>${parts.join("")}${g ? "" : `<p class="hint">${esc(t("goalNone"))} <a href="#settings" data-settings-section="general">${esc(t("tabSettings"))}</a></p>`}</section>`;
+}
+
 // The current supplier, with the contract end and current prices; a hint to add one when there is none.
 function supplierCardHtml(state) {
   if (!SUPPLIED.includes(ui.commodity)) return "";
@@ -463,6 +496,7 @@ export function renderOverview(view) {
   const cards = {
     supplier: () => supplierCardHtml(state),
     forecast: () => forecastHtml(state),
+    insights: () => insightsHtml(state),
     year: () => (years.length ? `
       <section class="card">
         <h2>${esc(t(ui.money ? (ui.quarters ? "quarterCosts" : "yearCosts") : ui.quarters ? "quarterChart" : "yearChart"))}</h2>

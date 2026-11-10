@@ -1,6 +1,6 @@
 // The order of the overview's cards, which are hidden and which span both columns on a wide screen; set in Settings, kept per device.
 // A card only shows where it applies (some in the usage view, some in the costs view); the order covers them all.
-export const CARDS = ["supplier", "forecast", "year", "compare", "table", "upgrades", "bills", "price", "offers"];
+export const CARDS = ["supplier", "forecast", "insights", "year", "compare", "table", "upgrades", "bills", "price", "offers"];
 
 const key = "home-meters-layout";
 

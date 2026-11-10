@@ -1,6 +1,7 @@
-import { CURRENCIES, METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
+import { DEFAULT_ELECTRICITY_CO2 } from "../insights.js";
+import { COMMODITIES, CURRENCIES, METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
-import { fmtMonth, fmtTime, lang, t } from "../i18n.js";
+import { cur, fmtMonth, fmtTime, lang, t } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bulkEnabled, setBulkEnabled } from "./bulk.js";
 import { reminderCalendar } from "../reminder.js";
@@ -142,6 +143,19 @@ export function renderSettings(view, rerender) {
       <select id="currency" class="short-input">${Object.entries(CURRENCIES).map(([code, sign]) => `<option value="${code}" ${code === state.config.currency ? "selected" : ""}>${code} (${esc(sign)})</option>`).join("")}</select>
       <p class="hint">${esc(t("currencyHint"))}</p>
     </section>
+    <section class="card">
+      <h2>${esc(t("goalsTitle"))}</h2>
+      <p class="hint">${esc(t("goalsHint"))}</p>
+      ${COMMODITIES.map((k) => `
+        <span class="field">${esc(t(k))}</span>
+        <div class="two-cols">
+          <div class="meter-input"><input type="text" inputmode="decimal" data-goal="${k}" data-kind="usage" value="${state.config.goals?.[k]?.usage ?? ""}" aria-label="${esc(t(k))} ${esc(t("goalUsage"))}" placeholder="${esc(t("goalUsage"))}" /><span class="unit">${k === "electricity" ? "kWh" : "m³"}</span></div>
+          <div class="meter-input"><input type="text" inputmode="decimal" data-goal="${k}" data-kind="cost" value="${state.config.goals?.[k]?.cost ?? ""}" aria-label="${esc(t(k))} ${esc(t("goalCost"))}" placeholder="${esc(t("goalCost"))}" /><span class="unit">${esc(cur())}</span></div>
+        </div>`).join("")}
+      <label class="field" for="co2-el">${esc(t("co2Factor"))}</label>
+      <div class="meter-input short-input"><input type="text" inputmode="decimal" id="co2-el" value="${state.config.co2Electricity ?? ""}" placeholder="${DEFAULT_ELECTRICITY_CO2}" /><span class="unit">kg/kWh</span></div>
+      <p class="hint">${esc(t("co2FactorHint", { value: DEFAULT_ELECTRICITY_CO2 }))}</p>
+    </section>
     </div>
     ${group("suppliers", suppliersHtml())}
     <div class="settings-group" data-group="house" ${section === "house" ? "" : "hidden"}>
@@ -247,6 +261,19 @@ export function renderSettings(view, rerender) {
     const value = parseNumber(event.target.value);
     if (value > 0) update((s) => setConfig(s, { gasKwhFactor: value }));
     else event.target.value = getState().config.gasKwhFactor;
+  });
+  // An empty goal or factor clears it.
+  view.querySelectorAll("[data-goal]").forEach((input) =>
+    input.addEventListener("change", () => {
+      const value = parseNumber(input.value);
+      if (value != null && !(value > 0)) return (input.value = getState().config.goals?.[input.dataset.goal]?.[input.dataset.kind] ?? "");
+      update((s) => setConfig(s, { goals: { [input.dataset.goal]: { [input.dataset.kind]: value } } }));
+    }),
+  );
+  view.querySelector("#co2-el").addEventListener("change", (e) => {
+    const value = parseNumber(e.target.value);
+    if (value != null && !(value > 0)) return (e.target.value = getState().config.co2Electricity ?? "");
+    update((s) => setConfig(s, { co2Electricity: value }));
   });
   view.querySelector("#currency").addEventListener("change", (e) => update((s) => setConfig(s, { currency: e.target.value })));
   view.querySelector("#bulk-enabled").addEventListener("change", (event) => setBulkEnabled(event.target.checked));
