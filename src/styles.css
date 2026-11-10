@@ -116,6 +116,12 @@ main {
 .card-head { display: flex; align-items: flex-start; gap: 8px; }
 .card-head h2 { flex: 1; }
 .card-max { flex: none; margin: -4px -6px 0 0; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.layout-list { list-style: none; margin: 10px 0; padding: 0; }
+.layout-row { display: flex; align-items: center; gap: 4px; padding: 4px 0; border-top: 1px solid var(--border); }
+.layout-row:first-child { border-top: 0; }
+.layout-row .check { flex: 1; margin: 0; }
+.layout-row .card-max { margin: 0; }
+.card-max:disabled { opacity: 0.3; cursor: default; background: none; }
 .card-max:hover { color: var(--text); background: var(--border); }
 /* Maximizing is for a wide screen only: on a phone the card is already full width. */
 @media (max-width: 1099px) { .card-max[data-open] { display: none; } }

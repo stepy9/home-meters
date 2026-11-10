@@ -9,6 +9,7 @@ import { csvExport } from "../household.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 import { bindUpgrades, upgradesSettingsHtml } from "./upgrades.js";
+import { cardHidden, cardOrder, moveCard, resetLayout, setCardHidden } from "./layout.js";
 
 function cloudHtml() {
   if (!cloudAvailable()) return `<p class="warn">${esc(t("cloudMissingKey"))}</p>`;
@@ -74,6 +75,41 @@ export function setSettingsSection(next) {
     localStorage.setItem(sectionKey, next);
   } catch {}
 }
+// The overview's cards, each with arrows to move it and a box to show or hide it.
+function layoutRowsHtml() {
+  const order = cardOrder();
+  return order
+    .map((c, i) => `<li class="layout-row">
+      <label class="check"><input type="checkbox" data-card-show="${c}" ${cardHidden(c) ? "" : "checked"} />${esc(t(`card.${c}`))}</label>
+      <button type="button" class="card-max" data-card-move="${c}" data-step="-1" aria-label="${esc(t("moveUp"))}" title="${esc(t("moveUp"))}" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button type="button" class="card-max" data-card-move="${c}" data-step="1" aria-label="${esc(t("moveDown"))}" title="${esc(t("moveDown"))}" ${i === order.length - 1 ? "disabled" : ""}>↓</button>
+    </li>`)
+    .join("");
+}
+
+function bindLayout(view) {
+  const list = view.querySelector("#layout-list");
+  const redraw = (card, step) => {
+    list.innerHTML = layoutRowsHtml();
+    // Keep the focus on the arrow just used (or the other one at the top or bottom), so a card can be moved several places with the keyboard.
+    if (card) (list.querySelector(`[data-card-move="${card}"][data-step="${step}"]:not([disabled])`) ?? list.querySelector(`[data-card-move="${card}"]:not([disabled])`))?.focus();
+  };
+  list.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-card-move]");
+    if (!b) return;
+    moveCard(b.dataset.cardMove, Number(b.dataset.step));
+    redraw(b.dataset.cardMove, b.dataset.step);
+  });
+  list.addEventListener("change", (e) => {
+    const box = e.target.closest("[data-card-show]");
+    if (box) setCardHidden(box.dataset.cardShow, !box.checked);
+  });
+  view.querySelector("#layout-reset").addEventListener("click", () => {
+    resetLayout();
+    redraw();
+  });
+}
+
 const group = (name, html) => `<div class="settings-group" data-group="${name}" ${name === section ? "" : "hidden"}>${html}</div>`;
 
 export function renderSettings(view, rerender) {
@@ -136,6 +172,12 @@ export function renderSettings(view, rerender) {
       <p class="hint">${esc(t("calendarHint"))}</p>
     </section>
     <section class="card">
+      <h2>${esc(t("layoutTitle"))}</h2>
+      <p class="hint">${esc(t("layoutHint"))}</p>
+      <ul class="layout-list" id="layout-list">${layoutRowsHtml()}</ul>
+      <button type="button" class="mp-link" id="layout-reset">${esc(t("layoutReset"))}</button>
+    </section>
+    <section class="card">
       <h2>${esc(t("backup"))}</h2>
       <div class="btn-row">
         <button class="btn" id="export">${esc(t("exportJson"))}</button>
@@ -158,6 +200,7 @@ export function renderSettings(view, rerender) {
     }),
   );
   bindSuppliers(view, rerender);
+  bindLayout(view);
   for (const [id, key] of [["#house-area", "area"], ["#house-people", "people"], ["#house-children", "children"]])
     view.querySelector(id).addEventListener("change", (e) => {
       const v = parseNumber(e.target.value);

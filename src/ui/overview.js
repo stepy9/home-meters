@@ -14,6 +14,7 @@ import { drawHousehold, householdHtml } from "./household.js";
 import { bindBills, billsHtml } from "./bills.js";
 import { priceHistory } from "../household.js";
 import { monthlyDegreeDays, perDegreeDays } from "../weather.js";
+import { cardHidden, cardOrder } from "./layout.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -447,18 +448,11 @@ export function renderOverview(view) {
     return `<dialog class="card-modal"><div class="card">${body}</div></dialog>`;
   };
 
-  view.innerHTML = `
-    ${noticesHtml()}
-    <div class="segmented">${tabs}</div>
-    ${unitToggle}
-    ${weatherNote}
-    ${years.length || weatherOn() ? "" : `<p class="info-note">${esc(t(ui.money ? "noCosts" : "noData"))}${ui.money ? ` <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a>` : ""}</p>`}
-    ${ui.money && missingPrices && years.length ? `<p class="info-note">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}
-    ${supplierCardHtml(state)}
-    ${forecastHtml(state)}
-    ${
-      years.length
-        ? `
+  // The cards in the order set in Settings; each is empty where it does not apply.
+  const cards = {
+    supplier: () => supplierCardHtml(state),
+    forecast: () => forecastHtml(state),
+    year: () => (years.length ? `
       <section class="card">
         <h2>${esc(t(ui.money ? (ui.quarters ? "quarterCosts" : "yearCosts") : ui.quarters ? "quarterChart" : "yearChart"))}</h2>
         ${weatherInCard}
@@ -466,28 +460,40 @@ export function renderOverview(view) {
         ${statsHtml(table, ui.year, state)}
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
         ${marksLegendHtml(chartMarks(state))}
-      </section>
+      </section>` : ""),
+    compare: () => (years.length ? `
       <section class="card">
         ${cardHead("compareChart", "compare")}
         ${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y), recent(years))}
         <div class="chart-box"><canvas id="compare-chart"></canvas></div>
-      </section>
+      </section>` : ""),
+    table: () => (years.length ? `
       <section class="card">
         ${cardHead("compareTable", "table")}
         ${tableHtml(years, shown)}
-      </section>`
-        : ""
-    }
-    ${ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)}
-    ${ui.money && SUPPLIED.includes(ui.commodity) ? billsHtml(state, ui.commodity) : ""}
-    ${ui.money ? priceChartHtml(state) : ""}
-    ${ui.money ? offersHtml(ui.commodity) : ""}
+      </section>` : ""),
+    upgrades: () => (ui.money ? "" : upgradesOverviewHtml(state, ui.commodity, upgradeDd)),
+    bills: () => (ui.money && SUPPLIED.includes(ui.commodity) ? billsHtml(state, ui.commodity) : ""),
+    price: () => (ui.money ? priceChartHtml(state) : ""),
+    offers: () => (ui.money ? offersHtml(ui.commodity) : ""),
+  };
+  const cardsHtml = cardOrder().filter((c) => !cardHidden(c)).map((c) => cards[c]()).join("");
+
+  view.innerHTML = `
+    ${noticesHtml()}
+    <div class="segmented">${tabs}</div>
+    ${unitToggle}
+    ${weatherNote}
+    ${years.length || weatherOn() ? "" : `<p class="info-note">${esc(t(ui.money ? "noCosts" : "noData"))}${ui.money ? ` <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a>` : ""}</p>`}
+    ${ui.money && missingPrices && years.length ? `<p class="info-note">${esc(t("missingPrices", { months: missingPrices }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : ""}
+    ${cardsHtml}
     ${modalHtml()}
 `;
 
   if (years.length) {
-    yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));
-    compareChart(view.querySelector("#compare-chart"), years, shown);
+    // A card hidden in Settings has no canvas.
+    if (view.querySelector("#year-chart")) yearChart(view.querySelector("#year-chart"), state, shown.get(ui.year));
+    if (view.querySelector("#compare-chart")) compareChart(view.querySelector("#compare-chart"), years, shown);
   }
   const modal = view.querySelector(".card-modal");
   if (modal) {
