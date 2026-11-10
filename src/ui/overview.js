@@ -432,11 +432,11 @@ export function renderOverview(view) {
   const yearChips = (attr, isOn, color, list = years) =>
     `<div class="chips">${list.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
-  // A heading with a maximize button, offered only when there are more years than the card shows by default.
+  // A heading with a maximize button: full width, a taller chart and all the years.
   const cardHead = (title, card) => {
     const on = ui.wide.has(card);
     const label = esc(t(on ? "collapseCard" : "expandCard"));
-    const btn = years.length > RECENT_YEARS || on ? `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>` : "";
+    const btn = `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>`;
     return `<div class="card-head"><h2>${esc(t(title))}</h2>${btn}</div>`;
   };
 
