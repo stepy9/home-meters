@@ -51,3 +51,17 @@ test("negative consumption is flagged as a likely typo", () => {
   const [a] = findAnomalies(s, "2026-11");
   assert.equal(a.kind, "negative");
 });
+
+test("a reading being typed: far above or below the usual is flagged, a normal one not", async () => {
+  const { checkReading } = await import("../src/anomalies.js");
+  const s = series(emptyState(), "water", "2026-03", [10, 11, 9, 10, 12, 10]);
+  const last = 1000 + 62;
+  assert.equal(checkReading(s, { meter: "water", month: "2026-10", value: last + 11 }), null);
+  assert.equal(checkReading(s, { meter: "water", month: "2026-10", value: last + 30 }).kind, "high");
+  assert.equal(checkReading(s, { meter: "water", month: "2026-10", value: last + 1 }).kind, "low");
+  // Two months since the last reading: judged per month.
+  assert.equal(checkReading(s, { meter: "water", month: "2026-11", value: last + 21 }), null);
+  // Lower than last time is left to its own warning; no history, no verdict.
+  assert.equal(checkReading(s, { meter: "water", month: "2026-10", value: last - 5 }), null);
+  assert.equal(checkReading(s, { meter: "gas", month: "2026-10", value: 5 }), null);
+});

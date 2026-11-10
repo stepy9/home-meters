@@ -113,3 +113,15 @@ test("months sum into quarters, partial ones marked", async () => {
   assert.equal(q[2], null);
   assert.equal(q[3].months, 1);
 });
+
+test("projectYear: missing months from last year at this year's pace", async () => {
+  const { projectYear } = await import("../src/data.js");
+  const m = (v) => ({ total: v });
+  const prev = Array.from({ length: 12 }, () => m(100));
+  const cur = [m(110), m(110), m(110), ...Array(9).fill(null)];
+  const p = projectYear(cur, prev);
+  assert.equal(p.known, 3);
+  assert.equal(Math.round(p.total), 1320);
+  assert.equal(projectYear(prev, prev), null);
+  assert.equal(projectYear(cur, null), null);
+});

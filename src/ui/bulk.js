@@ -77,6 +77,7 @@ export function bulkHtml() {
     <details class="card bulk" id="bulk" ${ui.open ? "open" : ""}>
       <summary><h2>${esc(t("bulkTitle"))}</h2></summary>
       <p class="hint">${esc(t("bulkHint"))}</p>
+      <label class="btn bulk-file">${esc(t("bulkFile"))}<input type="file" id="bulk-file" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden /></label>
       <textarea id="bulk-text" rows="6" spellcheck="false" autocapitalize="off" placeholder="${esc(t("bulkPlaceholder"))}">${esc(ui.text)}</textarea>
       <label class="check"><input type="checkbox" id="bulk-early" ${ui.earlyToPrevious ? "checked" : ""} />${esc(t("bulkEarly"))}</label>
       <div id="bulk-result"></div>
@@ -126,6 +127,23 @@ export function bindBulk(root) {
   root.querySelector("#bulk-text").addEventListener("input", (e) => {
     ui.text = e.target.value;
     ui.columns = null;
+    renderResult(root);
+  });
+  // A CSV or TSV file: its text goes into the field, as if pasted. UTF-8, else Windows-1250 (a Czech Excel export).
+  root.querySelector("#bulk-file").addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const bytes = await file.arrayBuffer();
+    let text;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      text = new TextDecoder("windows-1250").decode(bytes);
+    }
+    ui.text = text.replace(/^﻿/, "");
+    ui.columns = null;
+    root.querySelector("#bulk-text").value = ui.text;
+    e.target.value = "";
     renderResult(root);
   });
   root.querySelector("#bulk-early").addEventListener("change", (e) => {

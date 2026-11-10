@@ -1,5 +1,5 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, upgradeKindsLabel, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
+import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, upgradeKindsLabel, byYear, change, commodityConsumption, metersOf, projectYear, yearTotal } from "../data.js";
 import { fmt, fmtMonth, fmtPct, t, unitLabel, cur } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
@@ -285,6 +285,16 @@ function advanceHtml(state, year) {
   return `<div class="stat"><div class="label">${esc(t("advancesYear", { year: periodLabel(period) }))}</div><div class="value ${over ? "down" : "up"}">${over ? "+" : "−"}${fmt(Math.abs(b.balance), 0)} ${cur()}</div><div class="sub">${esc(t(over ? "overpaid" : "underpaid"))} · ${fmt(b.paid, 0)} / ${fmt(b.cost, 0)} ${cur()}</div></div>`;
 }
 
+// The current year's total expected, its missing months taken from last year at this year's pace.
+function projectionHtml(table, year) {
+  if (weatherOn() || year !== Number(currentMonth().slice(0, 4))) return "";
+  const p = projectYear(table.get(year), table.get(year - 1));
+  if (!p) return "";
+  const last = yearTotal(table.get(year - 1)).total;
+  const d = last > 0 ? p.total / last - 1 : null;
+  return `<div class="stat"><div class="label">${esc(t("projectedYear", { year }))}</div><div class="value">~${fmt(p.total, 0)}</div><div class="sub">${esc(unitOf())}${d == null ? "" : ` · ${fmtPct(d)} ${esc(t("vsLastYear", { year: year - 1 }))}`}</div></div>`;
+}
+
 function statsHtml(table, year, state) {
   const row = table.get(year);
   const { total, months } = yearTotal(row);
@@ -302,6 +312,7 @@ function statsHtml(table, year, state) {
   return `<div class="stats">
     <div class="stat"><div class="label">${esc(t(weatherOn() ? "average" : "total"))} ${year}</div><div class="value">${fmt(weatherOn() ? (months ? total / months : 0) : total, weatherOn() ? 1 : 0)}</div><div class="sub">${esc(unitOf())} · ${esc(t("perMonth", { months }))}</div></div>
     ${compare}
+    ${projectionHtml(table, year)}
     ${ui.money ? advanceHtml(state, year) : ""}
   </div>`;
 }

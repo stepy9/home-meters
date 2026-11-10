@@ -546,3 +546,21 @@ export const billsOf = (state, commodity) =>
   Object.values(state.bills ?? {})
     .filter((b) => !b.deleted && b.commodity === commodity)
     .sort((a, b) => b.to.localeCompare(a.to));
+
+// The whole year's total expected from the months known: each missing month taken from the year before, scaled
+// by how this year's known months compare with the same months then. null when nothing is missing, or there is
+// no earlier year to lean on. { total, known, missing }.
+export function projectYear(months, prevMonths) {
+  if (!months || !prevMonths) return null;
+  const missing = months.map((m, i) => (m ? null : i)).filter((i) => i != null);
+  if (!missing.length || missing.some((i) => !prevMonths[i])) return null;
+  const pairs = months.map((m, i) => [m, prevMonths[i]]).filter(([a, b]) => a && b);
+  if (pairs.length < 2) return null;
+  const now = pairs.reduce((s, [a]) => s + a.total, 0);
+  const then = pairs.reduce((s, [, b]) => s + b.total, 0);
+  if (then <= 0) return null;
+  const ratio = now / then;
+  const actual = months.filter(Boolean).reduce((s, m) => s + m.total, 0);
+  const rest = missing.reduce((s, i) => s + prevMonths[i].total * ratio, 0);
+  return { total: actual + rest, known: 12 - missing.length, missing: missing.length };
+}

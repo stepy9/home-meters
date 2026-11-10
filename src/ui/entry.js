@@ -1,4 +1,5 @@
 import { METERS, deleteReading, monthAdd, readingAt, readingBefore, readingsOf, setReading, usedBetween } from "../data.js";
+import { checkReading } from "../anomalies.js";
 import { fmt, fmtMonth, t, unitLabel } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { bindBulk, bulkEnabled, bulkHtml } from "./bulk.js";
@@ -37,6 +38,7 @@ function meterCard(state, meter) {
       </div>
       <p class="hint used"></p>
       <p class="warn" hidden>${esc(t("lowerWarning"))}</p>
+      <p class="warn unusual" hidden></p>
       <label class="check"><input type="checkbox" name="swap" ${swapped ? "checked" : ""} />${esc(t("swap"))}</label>
       <div class="swap-fields" ${swapped ? "" : "hidden"}>
         <div><label class="field">${esc(t("oldFinal"))}</label><input type="text" inputmode="decimal" name="oldFinal" value="${swapped ? esc(current.oldFinal) : ""}" /></div>
@@ -61,6 +63,11 @@ function refreshCard(card) {
   const used = prev && Number.isFinite(reading.value) && (reading.oldFinal == null || Number.isFinite(reading.oldFinal)) ? usedBetween(prev, reading) : null;
   card.querySelector(".used").textContent = used == null ? "" : t("usedSince", { value: `${fmt(used, 3)} ${unitLabel(meter.unit)}` });
   card.querySelector(".warn").hidden = !(used != null && used < 0);
+  // Well above or far below the usual use: a leak, or a digit too many or missing.
+  const check = used != null ? checkReading(state, reading) : null;
+  const unusual = card.querySelector(".unusual");
+  unusual.hidden = !check;
+  if (check) unusual.textContent = t(check.kind === "high" ? "entryHigh" : "entryLow", { value: `${fmt(check.perMonth, 1)} ${unitLabel(meter.unit)}`, usual: `${fmt(check.usual, 1)} ${unitLabel(meter.unit)}` });
 }
 
 function historyHtml(state) {
