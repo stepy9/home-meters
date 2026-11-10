@@ -37,9 +37,12 @@ function render() {
   renderControls();
   document.title = t("appName");
   document.getElementById("title").textContent = t("appName");
-  document.getElementById("tabbar").innerHTML = Object.entries(tabs)
+  // The same links twice: at the bottom on a phone, in the top bar on a wide screen.
+  const links = Object.entries(tabs)
     .map(([id, key]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ""}>${icons[id]}<span>${t(key)}</span></a>`)
     .join("");
+  document.getElementById("tabbar").innerHTML = links;
+  document.getElementById("topnav").innerHTML = links;
   // What is typed in an open form survives a redraw (after a sync on coming back to the app, say): the values
   // are read before and put back into the same fields after, as long as the form is still open.
   const drafts = tab !== "entry" && view.dataset.tab === tab ? readDrafts() : null;
