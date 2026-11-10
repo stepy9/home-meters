@@ -1,4 +1,4 @@
-// The order of the overview's cards and which are hidden, set in Settings and kept per device.
+// The order of the overview's cards, which are hidden and which span both columns on a wide screen; set in Settings, kept per device.
 // A card only shows where it applies (some in the usage view, some in the costs view); the order covers them all.
 export const CARDS = ["supplier", "forecast", "year", "compare", "table", "upgrades", "bills", "price", "offers"];
 
@@ -10,9 +10,10 @@ function load() {
     const order = (saved.order ?? []).filter((c) => CARDS.includes(c));
     // A card added in a later version goes where it sits by default.
     for (const c of CARDS) if (!order.includes(c)) order.splice(Math.min(CARDS.indexOf(c), order.length), 0, c);
-    return { order, hidden: new Set((saved.hidden ?? []).filter((c) => CARDS.includes(c))) };
+    const known = (list) => new Set((list ?? []).filter((c) => CARDS.includes(c)));
+    return { order, hidden: known(saved.hidden), full: known(saved.full) };
   } catch {
-    return { order: [...CARDS], hidden: new Set() };
+    return { order: [...CARDS], hidden: new Set(), full: new Set() };
   }
 }
 
@@ -20,12 +21,13 @@ let layout = load();
 
 function save() {
   try {
-    localStorage.setItem(key, JSON.stringify({ order: layout.order, hidden: [...layout.hidden] }));
+    localStorage.setItem(key, JSON.stringify({ order: layout.order, hidden: [...layout.hidden], full: [...layout.full] }));
   } catch {}
 }
 
 export const cardOrder = () => layout.order;
 export const cardHidden = (card) => layout.hidden.has(card);
+export const cardFull = (card) => layout.full.has(card);
 
 export function moveCard(card, step) {
   const from = layout.order.indexOf(card);
@@ -41,7 +43,13 @@ export function setCardHidden(card, hidden) {
   save();
 }
 
+export function setCardFull(card, full) {
+  if (full) layout.full.add(card);
+  else layout.full.delete(card);
+  save();
+}
+
 export function resetLayout() {
-  layout = { order: [...CARDS], hidden: new Set() };
+  layout = { order: [...CARDS], hidden: new Set(), full: new Set() };
   save();
 }

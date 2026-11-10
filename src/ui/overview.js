@@ -14,7 +14,7 @@ import { drawHousehold, householdHtml } from "./household.js";
 import { bindBills, billsHtml } from "./bills.js";
 import { priceHistory } from "../household.js";
 import { monthlyDegreeDays, perDegreeDays } from "../weather.js";
-import { cardHidden, cardOrder } from "./layout.js";
+import { cardFull, cardHidden, cardOrder } from "./layout.js";
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend);
 
@@ -477,7 +477,11 @@ export function renderOverview(view) {
     price: () => (ui.money ? priceChartHtml(state) : ""),
     offers: () => (ui.money ? offersHtml(ui.commodity) : ""),
   };
-  const cardsHtml = cardOrder().filter((c) => !cardHidden(c)).map((c) => cards[c]()).join("");
+  // A card set to the full width spans both columns on a wide screen.
+  const cardsHtml = cardOrder()
+    .filter((c) => !cardHidden(c))
+    .map((c) => (cardFull(c) ? cards[c]().replace('<section class="card', '<section class="card full') : cards[c]()))
+    .join("");
 
   view.innerHTML = `
     ${noticesHtml()}

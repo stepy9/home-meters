@@ -9,7 +9,7 @@ import { csvExport } from "../household.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { bindSuppliers, suppliersHtml } from "./suppliers.js";
 import { bindUpgrades, upgradesSettingsHtml } from "./upgrades.js";
-import { cardHidden, cardOrder, moveCard, resetLayout, setCardHidden } from "./layout.js";
+import { cardFull, cardHidden, cardOrder, moveCard, resetLayout, setCardFull, setCardHidden } from "./layout.js";
 
 function cloudHtml() {
   if (!cloudAvailable()) return `<p class="warn">${esc(t("cloudMissingKey"))}</p>`;
@@ -75,12 +75,13 @@ export function setSettingsSection(next) {
     localStorage.setItem(sectionKey, next);
   } catch {}
 }
-// The overview's cards, each with arrows to move it and a box to show or hide it.
+// The overview's cards, each with a box to show or hide it, a switch for the full width and arrows to move it.
 function layoutRowsHtml() {
   const order = cardOrder();
   return order
     .map((c, i) => `<li class="layout-row">
       <label class="check"><input type="checkbox" data-card-show="${c}" ${cardHidden(c) ? "" : "checked"} />${esc(t(`card.${c}`))}</label>
+      <button type="button" class="layout-full" data-card-full="${c}" aria-pressed="${cardFull(c)}" title="${esc(t("layoutFullHint"))}">${esc(t(cardFull(c) ? "layoutFull" : "layoutHalf"))}</button>
       <button type="button" class="card-max" data-card-move="${c}" data-step="-1" aria-label="${esc(t("moveUp"))}" title="${esc(t("moveUp"))}" ${i === 0 ? "disabled" : ""}>↑</button>
       <button type="button" class="card-max" data-card-move="${c}" data-step="1" aria-label="${esc(t("moveDown"))}" title="${esc(t("moveDown"))}" ${i === order.length - 1 ? "disabled" : ""}>↓</button>
     </li>`)
@@ -95,6 +96,11 @@ function bindLayout(view) {
     if (card) (list.querySelector(`[data-card-move="${card}"][data-step="${step}"]:not([disabled])`) ?? list.querySelector(`[data-card-move="${card}"]:not([disabled])`))?.focus();
   };
   list.addEventListener("click", (e) => {
+    const full = e.target.closest("[data-card-full]");
+    if (full) {
+      setCardFull(full.dataset.cardFull, !cardFull(full.dataset.cardFull));
+      return redraw();
+    }
     const b = e.target.closest("[data-card-move]");
     if (!b) return;
     moveCard(b.dataset.cardMove, Number(b.dataset.step));

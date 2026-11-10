@@ -121,6 +121,10 @@ main {
 .layout-row:first-child { border-top: 0; }
 .layout-row .check { flex: 1; margin: 0; }
 .layout-row .card-max { margin: 0; }
+.layout-full { flex: none; min-width: 84px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+.layout-full[aria-pressed="true"] { color: var(--text); background: var(--border); }
+/* The width only matters where the overview has two columns. */
+@media (max-width: 1099px) { .layout-full { display: none; } }
 .card-max:disabled { opacity: 0.3; cursor: default; background: none; }
 .card-max:hover { color: var(--text); background: var(--border); }
 /* Maximizing is for a wide screen only: on a phone the card is already full width. */
@@ -454,6 +458,7 @@ select {
   main[data-tab="overview"] > :not(.card) { column-span: all; }
   main[data-tab="overview"] > .card { break-inside: avoid; display: inline-block; width: 100%; margin: 0 0 12px; }
   main[data-tab="overview"] .chart-box { height: 300px; }
+  main[data-tab="overview"] > .card.full { display: block; column-span: all; }
 }
 .season-row { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 10px; align-items: baseline; font-size: 14px; margin-top: 6px; }
 .season-row .hint { grid-column: 1 / -1; margin: 0; }
