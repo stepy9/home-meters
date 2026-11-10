@@ -40,6 +40,7 @@ function meterCard(state, meter) {
       <p class="warn" hidden>${esc(t("lowerWarning"))}</p>
       <p class="warn unusual" hidden></p>
       <label class="check"><input type="checkbox" name="swap" ${swapped ? "checked" : ""} />${esc(t("swap"))}</label>
+      <p class="hint swap-hint" ${swapped ? "" : "hidden"}>${esc(t("swapHint"))}</p>
       <div class="swap-fields" ${swapped ? "" : "hidden"}>
         <div><label class="field">${esc(t("oldFinal"))}</label><input type="text" inputmode="decimal" name="oldFinal" value="${swapped ? esc(current.oldFinal) : ""}" /></div>
         <div><label class="field">${esc(t("newStart"))}</label><input type="text" inputmode="decimal" name="newStart" value="${swapped ? esc(current.newStart) : "0"}" /></div>
@@ -59,11 +60,16 @@ function refreshCard(card) {
   const meter = METERS.find((m) => m.id === card.dataset.meter);
   const reading = cardReading(card);
   const prev = readingBefore(state, meter.id, month);
-  card.querySelector(".swap-fields").hidden = !card.querySelector('[name="swap"]').checked;
-  const used = prev && Number.isFinite(reading.value) && (reading.oldFinal == null || Number.isFinite(reading.oldFinal)) ? usedBetween(prev, reading) : null;
+  const swap = card.querySelector('[name="swap"]').checked;
+  card.querySelector(".swap-fields").hidden = !swap;
+  card.querySelector(".swap-hint").hidden = !swap;
+  // With a swap the top field is the new meter's state: the label says so.
+  card.querySelector(".field[for]").textContent = swap ? t("swapValue") : prev ? t("previous", { value: `${fmt(prev.value, 3)} ${unitLabel(meter.unit)}`, month: fmtMonth(prev.month) }) : t("noPrevious");
+  // A swap needs the old meter's final state before the use can be worked out.
+  const used = prev && Number.isFinite(reading.value) && (!swap || Number.isFinite(reading.oldFinal)) ? usedBetween(prev, reading) : null;
   card.querySelector(".used").textContent = used == null ? "" : t("usedSince", { value: `${fmt(used, 3)} ${unitLabel(meter.unit)}` });
   card.querySelector(".warn").hidden = !(used != null && used < 0);
-  card.dataset.invalid = (used != null && used < 0) || Number.isNaN(reading.value) || Number.isNaN(reading.oldFinal) ? "1" : "";
+  card.dataset.invalid = (used != null && used < 0) || Number.isNaN(reading.value) || (swap && reading.value != null && !Number.isFinite(reading.oldFinal)) ? "1" : "";
   // Well above or far below the usual use: a leak, or a digit too many or missing.
   const check = used != null ? checkReading(state, reading) : null;
   const unusual = card.querySelector(".unusual");
