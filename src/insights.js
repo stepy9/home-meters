@@ -82,3 +82,33 @@ export function suggestGoals(state) {
   }
   return out;
 }
+
+const SUMMER = ["06", "07", "08"];
+
+// Gas split into heating and the rest (hot water, cooking): the rest is what a summer month uses, taken as the same
+// every month; what a month uses above it is heating. The summer of the year itself, else of the year before.
+// Costs follow the use. { base (m³ a month), baseYear, heating, other, heatingCost, otherCost, months } or null.
+export function heatingSplit(state, year) {
+  const used = commodityConsumption(state, "gas");
+  const summer = (y) => SUMMER.map((m) => used.get(`${y}-${m}`)).filter((r) => r && r.total >= 0);
+  const baseYear = summer(year).length >= 2 ? year : summer(year - 1).length >= 2 ? year - 1 : null;
+  if (baseYear == null) return null;
+  const rows = summer(baseYear);
+  const base = rows.reduce((s, r) => s + r.total, 0) / rows.length;
+  const costs = commodityCosts(state, "gas");
+  const out = { base, baseYear, heating: 0, other: 0, heatingCost: 0, otherCost: 0, months: 0, priced: true };
+  for (const [month, row] of used) {
+    if (!month.startsWith(`${year}-`) || row.total < 0) continue;
+    const other = Math.min(row.total, base);
+    out.other += other;
+    out.heating += row.total - other;
+    out.months += 1;
+    const cost = costs.get(month);
+    if (!cost) out.priced = false;
+    else if (row.total > 0) {
+      out.otherCost += (cost.total * other) / row.total;
+      out.heatingCost += (cost.total * (row.total - other)) / row.total;
+    } else out.otherCost += cost.total;
+  }
+  return out.months ? out : null;
+}

@@ -6,7 +6,7 @@ import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
 import { advanceBalance, billingPeriod, commodityCosts, forecastBilling } from "../costs.js";
 import { currentMonth } from "./month-picker.js";
-import { baseLoad, emissions, goalProgress } from "../insights.js";
+import { baseLoad, emissions, goalProgress, heatingSplit } from "../insights.js";
 import { contractHtml, contractPeriod, priceSummary } from "./suppliers.js";
 import { noticesHtml } from "./notices.js";
 import { bindOffers, offersHtml } from "./offers.js";
@@ -371,6 +371,16 @@ function insightsHtml(state) {
     const last = year === Number(currentMonth().slice(0, 4)) ? currentMonth() : `${year}-12`;
     const b = baseLoad(state, last);
     if (b) stats.push(stat(t("baseLoad"), `~${fmt(b.watts, 0)} W`, esc(t("baseLoadSub", { kwh: fmt(b.kwhYear, 0), month: fmtMonth(b.month) }))));
+  }
+  if (ui.commodity === "gas") {
+    const h = heatingSplit(state, year);
+    if (h && h.heating + h.other > 0) {
+      const share = h.heating / (h.heating + h.other);
+      const money = (v) => (h.priced ? ` · ${fmt(v, 0)} ${cur()}` : "");
+      stats.push(stat(t("gasHeating"), `${fmt(h.heating, 0)} m³`, esc(`${fmt(share * 100, 0)} %${money(h.heatingCost)}`)));
+      stats.push(stat(t("gasOther"), `${fmt(h.other, 0)} m³`, esc(`${t("gasOtherSub", { base: fmt(h.base, 0) })}${money(h.otherCost)}`)));
+      parts.push(`<p class="hint">${esc(t("gasSplitHint", { year: h.baseYear, months: h.months }))}</p>`);
+    }
   }
   const e = ui.commodity !== "water" ? emissions(state, year) : null;
   const kg = e?.[ui.commodity];

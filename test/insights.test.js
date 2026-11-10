@@ -72,3 +72,15 @@ test("yearly report: totals, the year before and household costs per month", asy
   assert.equal(r.costs.every((c) => c == null), true);
   assert.equal(yearReport(s, 2020).commodities.length, 0);
 });
+
+test("gas split: the summer's use every month is hot water and cooking, the rest heating", async () => {
+  const { heatingSplit } = await import("../src/insights.js");
+  // 2026: Jan 200, Feb 150, Mar 100, Apr 60, May 30, Jun–Aug 20, Sep 25, Oct 80.
+  const s = series(emptyState(), "gas", "2025-12", [200, 150, 100, 60, 30, 20, 20, 20, 25, 80]);
+  const h = heatingSplit(s, 2026);
+  assert.equal(h.base, 20);
+  assert.equal(h.other, 200);
+  assert.equal(h.heating, 705 - 200);
+  assert.equal(h.months, 10);
+  assert.equal(heatingSplit(s, 2025), null);
+});
