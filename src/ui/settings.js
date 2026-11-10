@@ -1,4 +1,4 @@
-import { METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
+import { CURRENCIES, METERS, mergeStates, normalizeState, setConfig, stateText } from "../data.js";
 import { cloudAvailable, cloudStatus, connectCloud, disconnectCloud, syncNow } from "../cloud.js";
 import { fmtMonth, fmtTime, lang, t } from "../i18n.js";
 import { getState, update } from "../store.js";
@@ -138,6 +138,9 @@ export function renderSettings(view, rerender) {
       <label class="field" for="gas-factor">${esc(t("gasFactor"))}</label>
       <input type="text" inputmode="decimal" id="gas-factor" value="${esc(state.config.gasKwhFactor)}" />
       <p class="hint">${esc(t("gasFactorHint"))}</p>
+      <label class="field" for="currency">${esc(t("currency"))}</label>
+      <select id="currency" class="short-input">${Object.entries(CURRENCIES).map(([code, sign]) => `<option value="${code}" ${code === state.config.currency ? "selected" : ""}>${code} (${esc(sign)})</option>`).join("")}</select>
+      <p class="hint">${esc(t("currencyHint"))}</p>
     </section>
     </div>
     ${group("suppliers", suppliersHtml())}
@@ -245,6 +248,7 @@ export function renderSettings(view, rerender) {
     if (value > 0) update((s) => setConfig(s, { gasKwhFactor: value }));
     else event.target.value = getState().config.gasKwhFactor;
   });
+  view.querySelector("#currency").addEventListener("change", (e) => update((s) => setConfig(s, { currency: e.target.value })));
   view.querySelector("#bulk-enabled").addEventListener("change", (event) => setBulkEnabled(event.target.checked));
   view.querySelector("#reminder-day").addEventListener("change", (event) => {
     try {

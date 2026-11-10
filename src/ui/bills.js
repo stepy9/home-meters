@@ -1,6 +1,6 @@
 import { advanceBalance, billingPeriodOf } from "../costs.js";
 import { billsOf, deleteBill, monthAdd, setBill } from "../data.js";
-import { fmt, t } from "../i18n.js";
+import { fmt, t, cur } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, infoTip, parseNumber, toast } from "./dom.js";
 import { currentMonth } from "./month-picker.js";
@@ -9,7 +9,7 @@ import { currentMonth } from "./month-picker.js";
 // the app's costs and estimates match reality. editing: null, or { commodity, id } (id null for a new bill).
 let editing = null;
 
-const kc = (v) => `${fmt(v, 0)} Kč`;
+const kc = (v) => `${fmt(v, 0)} ${cur()}`;
 const signed = (v) => `${v >= 0 ? "+" : "−"}${kc(Math.abs(v))}`;
 const pad = (n) => String(n).padStart(2, "0");
 const label = ({ from, to }) => `${Number(from.slice(5))}/${from.slice(0, 4)} – ${Number(to.slice(5))}/${to.slice(0, 4)}`;
@@ -43,7 +43,7 @@ function formHtml(state, commodity, b) {
       ${monthSelects("to", period.to)}
       <div class="price-field">
         <label class="field" for="bill-cost">${esc(t("billCost"))}</label>
-        <div class="meter-input"><input type="text" inputmode="decimal" id="bill-cost" name="cost" value="${value(b?.cost)}" /><span class="unit">Kč</span></div>
+        <div class="meter-input"><input type="text" inputmode="decimal" id="bill-cost" name="cost" value="${value(b?.cost)}" /><span class="unit">${cur()}</span></div>
       </div>
       <label class="field" for="bill-balance">${esc(t("billResult"))}</label>
       <div class="two-cols">
@@ -51,7 +51,7 @@ function formHtml(state, commodity, b) {
           <option value="1" ${b?.balance == null || b.balance >= 0 ? "selected" : ""}>${esc(t("billOver"))}</option>
           <option value="-1" ${b?.balance < 0 ? "selected" : ""}>${esc(t("billUnder"))}</option>
         </select>
-        <div class="meter-input"><input type="text" inputmode="decimal" id="bill-balance" name="balance" value="${value(b?.balance)}" /><span class="unit">Kč</span></div>
+        <div class="meter-input"><input type="text" inputmode="decimal" id="bill-balance" name="balance" value="${value(b?.balance)}" /><span class="unit">${cur()}</span></div>
       </div>
       <label class="field" for="bill-note">${esc(t("note"))}</label>
       <input type="text" id="bill-note" name="note" autocomplete="off" value="${esc(b?.note ?? "")}" />

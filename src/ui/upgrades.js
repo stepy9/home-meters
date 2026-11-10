@@ -1,5 +1,5 @@
 import { COMMODITIES, UPGRADE_KINDS, deleteUpgrade, kindsAffect, setUpgrade, upgradeKindsLabel, upgradesOf } from "../data.js";
-import { fmt, fmtMonth, fmtPct, t } from "../i18n.js";
+import { fmt, fmtMonth, fmtPct, t, cur } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { upgradeImpact, upgradePayback } from "../upgrades.js";
 import { esc, parseNumber, toast } from "./dom.js";
@@ -10,7 +10,7 @@ import { currentMonth } from "./month-picker.js";
 // editing: null, or the id of the upgrade being edited ("" for a new one).
 let editing = null;
 
-const kc = (v) => `${fmt(v, 0)} Kč`;
+const kc = (v) => `${fmt(v, 0)} ${cur()}`;
 const pad = (n) => String(n).padStart(2, "0");
 const options = (values, selected, label = (v) => v) =>
   values.map((v) => `<option value="${v}" ${String(v) === String(selected) ? "selected" : ""}>${esc(label(v))}</option>`).join("");
@@ -39,8 +39,8 @@ function formHtml(u) {
       </div>
       <label class="field" for="up-name">${esc(t("upgradeName"))}</label>
       <input type="text" id="up-name" name="name" autocomplete="off" placeholder="${esc(t("upgradeNameHint"))}" value="${esc(u?.name ?? "")}" />
-      ${numField("cost", t("upgradeCost"), u?.cost, "Kč")}
-      ${numField("subsidy", t("upgradeSubsidy"), u?.subsidy, "Kč")}
+      ${numField("cost", t("upgradeCost"), u?.cost, cur())}
+      ${numField("subsidy", t("upgradeSubsidy"), u?.subsidy, cur())}
       <label class="field" for="up-company">${esc(t("upgradeCompany"))}</label>
       <input type="text" id="up-company" name="company" autocomplete="off" value="${esc(u?.company ?? "")}" />
       <label class="field">${esc(t("upgradeAffects"))}</label>

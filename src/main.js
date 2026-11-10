@@ -1,6 +1,8 @@
 import "./styles.css";
 import { cloudStatus, onCloudStatus, setupCloud } from "./cloud.js";
-import { lang, setLang, t } from "./i18n.js";
+import { lang, setCurrency, setLang, t } from "./i18n.js";
+import { CURRENCIES } from "./data.js";
+import { getState } from "./store.js";
 import { renderEntry, setEntryMonth } from "./ui/entry.js";
 import { dismissNotice } from "./ui/notices.js";
 import { leaveOverview, renderOverview } from "./ui/overview.js";
@@ -38,6 +40,7 @@ const lockIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11"
 
 function render() {
   const tab = currentTab();
+  setCurrency(CURRENCIES[getState().config.currency] ?? CURRENCIES.CZK);
   renderControls();
   document.title = t("appName");
   document.getElementById("title").textContent = t("appName");

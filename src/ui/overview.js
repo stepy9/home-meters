@@ -1,6 +1,6 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
 import { COMMODITIES, SUPPLIED, toQuarters, priceAt, supplierAt, suppliersOf, upgradesOf, upgradeKindsLabel, byYear, change, commodityConsumption, metersOf, yearTotal } from "../data.js";
-import { fmt, fmtMonth, fmtPct, t, unitLabel } from "../i18n.js";
+import { fmt, fmtMonth, fmtPct, t, unitLabel, cur } from "../i18n.js";
 import { getState } from "../store.js";
 import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
@@ -61,7 +61,7 @@ const yearColor = (years, year) => {
 
 const weatherOn = () => ui.commodity === "gas" && ui.gasWeather && !ui.money;
 const unitOf = () =>
-  ui.money ? "Kč" : ui.commodity === "electricity" ? "kWh" : ui.commodity === "gas" && ui.gasInKwh ? (weatherOn() ? t("perDD", { unit: "kWh" }) : "kWh") : weatherOn() ? t("perDD", { unit: "m³" }) : "m³";
+  ui.money ? cur() : ui.commodity === "electricity" ? "kWh" : ui.commodity === "gas" && ui.gasInKwh ? (weatherOn() ? t("perDD", { unit: "kWh" }) : "kWh") : weatherOn() ? t("perDD", { unit: "m³" }) : "m³";
 
 // Degree days for the place in the settings, fetched once per place and kept while the app is open.
 const weather = { key: null, data: null, loading: false, error: null };
@@ -215,7 +215,7 @@ function priceChartHtml(state) {
   const first = known[0];
   const last = known.at(-1);
   const delta = first ? last / first - 1 : null;
-  const unit = ui.commodity === "water" ? "Kč/m³" : "Kč/kWh";
+  const unit = ui.commodity === "water" ? `${cur()}/m³` : `${cur()}/kWh`;
   return `<section class="card"><h2>${esc(t("priceChartTitle"))}</h2>
     <p class="hint">${esc(t(ui.commodity === "water" ? "priceChartWater" : ui.commodity === "gas" ? "priceChartGas" : "priceChartEl", { first: fmt(first, 2), last: fmt(last, 2), unit, from: fmtMonth(h.months[0]) }))}${delta ? ` <strong class="${delta > 0 ? "up" : "down"}">${fmtPct(delta)}</strong>` : ""}</p>
     <div class="chart-box"><canvas id="price-chart"></canvas></div></section>`;
@@ -223,7 +223,7 @@ function priceChartHtml(state) {
 
 function priceChart(canvas, state) {
   const h = priceHistory(state, ui.commodity, currentMonth());
-  const unit = ui.commodity === "water" ? "Kč/m³" : "Kč/kWh";
+  const unit = ui.commodity === "water" ? `${cur()}/m³` : `${cur()}/kWh`;
   const datasets = [{ label: ui.commodity === "electricity" ? t("short.el-vt") : t(ui.commodity), data: h.unit, borderColor: cssVar(commodityColor[ui.commodity]), backgroundColor: cssVar(commodityColor[ui.commodity]), stepped: true, pointRadius: 0, borderWidth: 2.5 }];
   if (h.unitNt) datasets.push({ label: t("short.el-nt"), data: h.unitNt, borderColor: cssVar("--electricity-2"), backgroundColor: cssVar("--electricity-2"), stepped: true, pointRadius: 0, borderWidth: 2 });
   charts.push(
@@ -282,7 +282,7 @@ function advanceHtml(state, year) {
   const b = advanceBalance(state, ui.commodity, period);
   if (!b.months || !b.paid) return "";
   const over = b.balance >= 0;
-  return `<div class="stat"><div class="label">${esc(t("advancesYear", { year: periodLabel(period) }))}</div><div class="value ${over ? "down" : "up"}">${over ? "+" : "−"}${fmt(Math.abs(b.balance), 0)} Kč</div><div class="sub">${esc(t(over ? "overpaid" : "underpaid"))} · ${fmt(b.paid, 0)} / ${fmt(b.cost, 0)} Kč</div></div>`;
+  return `<div class="stat"><div class="label">${esc(t("advancesYear", { year: periodLabel(period) }))}</div><div class="value ${over ? "down" : "up"}">${over ? "+" : "−"}${fmt(Math.abs(b.balance), 0)} ${cur()}</div><div class="sub">${esc(t(over ? "overpaid" : "underpaid"))} · ${fmt(b.paid, 0)} / ${fmt(b.cost, 0)} ${cur()}</div></div>`;
 }
 
 function statsHtml(table, year, state) {
@@ -320,9 +320,9 @@ function forecastHtml(state) {
       : stat(t("forecastUsage"), `~${fmt(f.usage, 0)}`, ui.commodity === "water" ? "m³" : "kWh");
   const cells = [usage];
   if (f.cost != null) {
-    cells.push(stat(t("forecastCost"), `~${fmt(f.cost, 0)}`, "Kč"));
+    cells.push(stat(t("forecastCost"), `~${fmt(f.cost, 0)}`, cur()));
     const over = f.balance >= 0;
-    cells.push(stat(t(over ? "overpaid" : "underpaid"), `${over ? "+" : "−"}${fmt(Math.abs(f.balance), 0)} Kč`, esc(t("forecastPaid", { paid: fmt(f.paid, 0) })), over ? "down" : "up"));
+    cells.push(stat(t(over ? "overpaid" : "underpaid"), `${over ? "+" : "−"}${fmt(Math.abs(f.balance), 0)} ${cur()}`, esc(t("forecastPaid", { paid: fmt(f.paid, 0) })), over ? "down" : "up"));
   }
   const a = f.advance;
   // Suggest a different advance only when it is off by more than a rounding step.

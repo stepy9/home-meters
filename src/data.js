@@ -20,7 +20,11 @@ export const BILLING_MONTHS = [12, 6, 3, 1];
 export const COMMODITIES = ["electricity", "gas", "water"];
 export const meterById = (id) => METERS.find((meter) => meter.id === id);
 
+// The currency money is kept in; only its sign changes, nothing is converted.
+export const CURRENCIES = { CZK: "Kč", EUR: "€", USD: "$", GBP: "£", PLN: "zł", CHF: "CHF" };
+
 export const defaultConfig = () => ({
+  currency: "CZK",
   active: { "el-vt": true, "el-nt": false, gas: true, water: true },
   gasKwhFactor: 10.6,
   // The month (1–12) each commodity's billing period ends with; 12 is the calendar year.
@@ -110,6 +114,7 @@ export function normalizeState(raw) {
   const c = raw.config ?? {};
   for (const meter of METERS) if (typeof c.active?.[meter.id] === "boolean") state.config.active[meter.id] = c.active[meter.id];
   if (isNumber(c.gasKwhFactor) && c.gasKwhFactor > 0) state.config.gasKwhFactor = c.gasKwhFactor;
+  if (c.currency in CURRENCIES) state.config.currency = c.currency;
   // The place whose weather gas is compared against: a name and coordinates.
   if (c.location && isNumber(c.location.lat) && isNumber(c.location.lon)) state.config.location = { name: text(c.location.name, 120), lat: c.location.lat, lon: c.location.lon };
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];

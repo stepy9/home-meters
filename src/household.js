@@ -1,3 +1,4 @@
+import { cur } from "./i18n.js";
 // The whole household: what electricity, gas and water cost together per month, use per m² and per person over
 // the last twelve months, and a CSV of everything per month.
 import { commodityCosts } from "./costs.js";
@@ -130,8 +131,8 @@ export function csvExport(state, names) {
     `${names.use} ${names.gas} (m3)`,
     `${names.use} ${names.gas} (kWh)`,
     `${names.use} ${names.water} (m3)`,
-    ...SUPPLIED.map((c) => `${names.cost} ${names[c]} (Kč)`),
-    `${names.cost} ${names.total} (Kč)`,
+    ...SUPPLIED.map((c) => `${names.cost} ${names[c]} (${cur()})`),
+    `${names.cost} ${names.total} (${cur()})`,
   ];
   const rows = sorted.map((month) => {
     const reading = (id) => {

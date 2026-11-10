@@ -30,10 +30,12 @@ const translations = {
     history: "Poslední odečty",
     renderError: "Tuhle obrazovku se nepodařilo zobrazit",
     entrySettings: "Zadávání",
+    currency: "Měna",
+    currencyHint: "Jen označení u cen a nákladů, nic se nepřepočítává.",
     footerAbout: "Odečty elektřiny, plynu a vody, spotřeba, náklady a odhad vyúčtování.",
     footerPrivacy: "Data zůstávají v prohlížeči a ve vašem Dropboxu",
     layoutTitle: "Rozložení přehledu",
-    layoutHint: "Pořadí karet v Přehledu, které se mají ukazovat a které mají být na širokém displeji přes oba sloupce. Platí pro toto zařízení. Některé karty se ukazují jen u spotřeby, jiné jen u nákladů v Kč.",
+    layoutHint: "Pořadí karet v Přehledu, které se mají ukazovat a které mají být na širokém displeji přes oba sloupce. Platí pro toto zařízení. Některé karty se ukazují jen u spotřeby, jiné jen u nákladů v {cur}.",
     layoutReset: "Výchozí rozložení",
     layoutHalf: "1 sloupec",
     layoutFull: "Celá šířka",
@@ -65,7 +67,7 @@ const translations = {
     sewerCharge: "Stočné",
     priceMonthly: "Stálé poplatky celkem, s DPH",
     advance: "Záloha",
-    kcPerMonth: "Kč/měs.",
+    kcPerMonth: "{cur}/měs.",
     perMonthShort: "/měs.",
     priceHint: "Ceny za kWh včetně distribuce, daní a DPH, jak vyjdou z faktury. Stálé poplatky jsou měsíční platby nezávislé na spotřebě: stálý plat, jistič, ostatní.",
     priceHintWater: "Vodné a stočné za m³ s DPH; stálé poplatky jsou měsíční platby nezávislé na spotřebě.",
@@ -82,7 +84,7 @@ const translations = {
     "tariff.D57d": "dvoutarif, tepelné čerpadlo (NT 20 h)",
     "tariff.D61d": "dvoutarif, víkendový objekt",
     viewUsage: "Spotřeba",
-    viewCosts: "Kč",
+    viewCosts: "{cur}",
     costs: "Náklady",
     "houseChildren": "Z toho malé děti (do 6 let)",
     "houseChildrenHint": "Malé dítě se počítá jako 0,7 osoby (méně sprchování a splachování).",
@@ -168,8 +170,8 @@ const translations = {
     "upgradeChange": "spotřeby",
     "upgradeChangeWeather": "spotřeby na denostupeň",
     "upgradeSaved": "~{amount} {unit} za rok",
-    "upgradeMoney": "~{amount} Kč/rok",
-    "upgradeMoneyAll": "~{amount} Kč/rok celkem",
+    "upgradeMoney": "~{amount} {cur}/rok",
+    "upgradeMoneyAll": "~{amount} {cur}/rok celkem",
     "upgradePayback": "návratnost ~{years} let",
     "upgradeBasis": "Porovnáno {pairs} stejných měsíců rok před a po, ceny podle aktuálního ceníku.",
     "upgrade.insulation": "Zateplení",
@@ -214,8 +216,8 @@ const translations = {
     "forecastHint": "{actual} měs. podle skutečnosti, zbývajících {estimated} měs. odhadnuto podle loňska a aktuálních cen.",
     "forecastUsage": "Spotřeba za období",
     "forecastCost": "Náklady za období",
-    "forecastPaid": "zálohy {paid} Kč",
-    "forecastAdvance": "Doporučená záloha: {suggested} Kč{per} (teď {now} Kč{per}).",
+    "forecastPaid": "zálohy {paid} {cur}",
+    "forecastAdvance": "Doporučená záloha: {suggested} {cur}{per} (teď {now} {cur}{per}).",
     "offersTitle": "Porovnání nabídek",
     "offersHint": "Kolik by stála tvoje spotřeba za posledních {months} měs. ({usage} {unit}) u aktuálního ceníku a u nabídek. Ceny s DPH, včetně distribuce.",
     "offersNoData": "Porovnání bude k dispozici, až budou odečty aspoň za dva měsíce.",
@@ -390,6 +392,8 @@ const translations = {
     history: "Recent readings",
     renderError: "This screen could not be shown",
     entrySettings: "Entry",
+    currency: "Currency",
+    currencyHint: "Only the sign by prices and costs; nothing is converted.",
     footerAbout: "Electricity, gas and water readings, usage, costs and a billing forecast.",
     footerPrivacy: "Data stays in the browser and your Dropbox",
     layoutTitle: "Overview layout",
@@ -425,7 +429,7 @@ const translations = {
     sewerCharge: "Sewage charge",
     priceMonthly: "Fixed fees in total, with VAT",
     advance: "Advance",
-    kcPerMonth: "CZK/mo.",
+    kcPerMonth: "{cur}/mo.",
     perMonthShort: "/mo.",
     priceHint: "Prices per kWh including distribution, taxes and VAT, as they come out of the bill. Fixed fees are the monthly payments that do not depend on use: standing charge, breaker, other.",
     priceHintWater: "Water and sewage charge per m³ with VAT; fixed fees are monthly payments that do not depend on use.",
@@ -442,7 +446,7 @@ const translations = {
     "tariff.D57d": "two tariffs, heat pump (LT 20 h)",
     "tariff.D61d": "two tariffs, weekend house",
     viewUsage: "Usage",
-    viewCosts: "CZK",
+    viewCosts: "{cur}",
     costs: "Costs",
     "houseChildren": "Of them small children (under 6)",
     "houseChildrenHint": "A small child counts as 0.7 of a person (fewer showers and flushes).",
@@ -528,8 +532,8 @@ const translations = {
     "upgradeChange": "use",
     "upgradeChangeWeather": "use per degree day",
     "upgradeSaved": "~{amount} {unit} a year",
-    "upgradeMoney": "~{amount} Kč/year",
-    "upgradeMoneyAll": "~{amount} Kč/year in all",
+    "upgradeMoney": "~{amount} {cur}/year",
+    "upgradeMoneyAll": "~{amount} {cur}/year in all",
     "upgradePayback": "pays back in ~{years} years",
     "upgradeBasis": "Compared over {pairs} same months a year before and after, at the current prices.",
     "upgrade.insulation": "Insulation",
@@ -574,8 +578,8 @@ const translations = {
     "forecastHint": "{actual} mo. as they were, the remaining {estimated} mo. estimated from last year at current prices.",
     "forecastUsage": "Use over the period",
     "forecastCost": "Costs over the period",
-    "forecastPaid": "advances {paid} CZK",
-    "forecastAdvance": "Suggested advance: {suggested} CZK{per} (now {now} CZK{per}).",
+    "forecastPaid": "advances {paid} {cur}",
+    "forecastAdvance": "Suggested advance: {suggested} {cur}{per} (now {now} {cur}{per}).",
     "offersTitle": "Compare offers",
     "offersHint": "What your use over the last {months} mo. ({usage} {unit}) would cost at the current price list and at each offer. Prices with VAT, distribution included.",
     "offersNoData": "The comparison is available once there are readings for at least two months.",
@@ -738,9 +742,14 @@ export function setLang(next) {
   document.documentElement.lang = next;
 }
 
+// The sign of the currency set in Settings, put in for {cur} in every text.
+let currency = "Kč";
+export const setCurrency = (sign) => (currency = sign);
+export const cur = () => currency;
+
 export const t = (key, vars = {}) => {
   const text = translations[lang][key] ?? translations.en[key] ?? key;
-  return typeof text === "string" ? text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "") : text;
+  return typeof text === "string" ? text.replace(/\{(\w+)\}/g, (_, k) => ({ cur: currency, ...vars })[k] ?? "") : text;
 };
 
 const locale = () => (lang === "cs" ? "cs-CZ" : "en-GB");

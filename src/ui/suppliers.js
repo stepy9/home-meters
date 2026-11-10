@@ -18,7 +18,7 @@ import {
   supplierAt,
   suppliersOf,
 } from "../data.js";
-import { fmtDate, fmtMonth, lang, t } from "../i18n.js";
+import { fmtDate, fmtMonth, lang, t, cur } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, parseNumber, toast } from "./dom.js";
 import { commodityIcon } from "./icons.js";
@@ -50,7 +50,7 @@ export function contractHtml(supplier, { current = true } = {}) {
 export function priceSummary(commodity, p) {
   if (!p) return "";
   // Unit prices always to the haléř (5,40), fees in whole crowns.
-  const kc = (v, digits = 2) => `${new Intl.NumberFormat(lang === "cs" ? "cs-CZ" : "en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v)} Kč`;
+  const kc = (v, digits = 2) => `${new Intl.NumberFormat(lang === "cs" ? "cs-CZ" : "en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v)} ${cur()}`;
   const parts = [];
   if (commodity === "electricity") {
     if (p.tariff) parts.push(p.tariff);
@@ -127,7 +127,7 @@ const numberField = (name, label, value, unit) => `
   <div class="price-field">
     <label class="field" for="pr-${name}">${esc(label)}</label>
     <div class="meter-input"><input type="text" inputmode="decimal" id="pr-${name}" name="${name}" value="${value == null ? "" : esc(String(value).replace(".", ","))}" /><span class="unit">${esc(unit)}</span></div>
-    ${unit === "Kč/kWh" ? `<p class="hint" data-mwh="${name}"></p>` : ""}
+    ${unit === `${cur()}/kWh` ? `<p class="hint" data-mwh="${name}"></p>` : ""}
   </div>`;
 
 // Price lists quote Kč/MWh: the price typed per kWh shown per MWh too, to check it against the list.
@@ -137,7 +137,7 @@ function bindMwh(form) {
     const input = form.querySelector(`#pr-${out.dataset.mwh}`);
     const sync = () => {
       const v = parseNumber(input.value);
-      out.textContent = v == null || Number.isNaN(v) ? "" : `= ${fmt.format(v * 1000)} Kč/MWh`;
+      out.textContent = v == null || Number.isNaN(v) ? "" : `= ${fmt.format(v * 1000)} ${cur()}/MWh`;
     };
     sync();
     input.addEventListener("input", sync);
@@ -158,11 +158,11 @@ function priceFormHtml(supplier, p) {
       <label class="field" for="pr-breaker">${esc(t("breaker"))}</label>
       <select id="pr-breaker" name="breaker"><option value="">–</option>${BREAKERS.map((x) => `<option value="${x}" ${x === (last?.breaker ?? "") ? "selected" : ""}>${x}</option>`).join("")}</select>
       <p class="warn" id="pr-nt-warn" hidden>${esc(t("tariffNtWarning"))}</p>
-      ${numberField("unit", t("priceVt"), last?.unit, "Kč/kWh")}
-      <div data-nt>${numberField("unitNt", t("priceNt"), last?.unitNt, "Kč/kWh")}</div>`
+      ${numberField("unit", t("priceVt"), last?.unit, `${cur()}/kWh`)}
+      <div data-nt>${numberField("unitNt", t("priceNt"), last?.unitNt, `${cur()}/kWh`)}</div>`
       : c === "gas"
-        ? numberField("unit", t("priceGas"), last?.unit, "Kč/kWh")
-        : `${numberField("unit", t("waterCharge"), last?.unit, "Kč/m³")}${numberField("unitSewer", t("sewerCharge"), last?.unitSewer, "Kč/m³")}`;
+        ? numberField("unit", t("priceGas"), last?.unit, `${cur()}/kWh`)
+        : `${numberField("unit", t("waterCharge"), last?.unit, `${cur()}/m³`)}${numberField("unitSewer", t("sewerCharge"), last?.unitSewer, `${cur()}/m³`)}`;
   return `
     <form class="price-form" id="price-form" novalidate>
       <h4 class="price-title">${esc(p ? t("priceEdit") : t("priceAdd"))}</h4>
@@ -170,7 +170,7 @@ function priceFormHtml(supplier, p) {
       ${fromSelects(from)}
       ${fields}
       ${numberField("monthly", t("priceMonthly"), last?.monthly, t("kcPerMonth"))}
-      ${numberField("advance", t("advance"), last?.advance, c === "water" ? "Kč" : t("kcPerMonth"))}
+      ${numberField("advance", t("advance"), last?.advance, c === "water" ? cur() : t("kcPerMonth"))}
       ${
         c === "water"
           ? `<label class="field" for="pr-advancePeriod">${esc(t("advancePeriod"))}</label>

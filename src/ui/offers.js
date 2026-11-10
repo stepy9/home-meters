@@ -1,6 +1,6 @@
 import { compareOffers } from "../costs.js";
 import { TARIFFS, deleteOffer, isTwoTariff, setOffer } from "../data.js";
-import { fmt, t } from "../i18n.js";
+import { fmt, t, cur } from "../i18n.js";
 import { getState, update } from "../store.js";
 import { esc, infoTip, parseNumber, toast } from "./dom.js";
 import { currentMonth } from "./month-picker.js";
@@ -9,7 +9,7 @@ import { currentMonth } from "./month-picker.js";
 // editing: null, or { commodity, id } (id null for a new offer).
 let editing = null;
 
-const kc = (v) => `${fmt(v, 0)} Kč`;
+const kc = (v) => `${fmt(v, 0)} ${cur()}`;
 
 const field = (name, label, value, unit) => `
   <div class="price-field">
@@ -28,9 +28,9 @@ function formHtml(commodity, o) {
         commodity === "electricity"
           ? `<label class="field" for="of-tariff">${esc(t("tariff"))}</label>
       <select id="of-tariff" name="tariff"><option value="">–</option>${TARIFFS.map((x) => `<option value="${x.id}" ${x.id === tariff ? "selected" : ""}>${x.id} – ${esc(t(`tariff.${x.id}`))}</option>`).join("")}</select>
-      ${field("unit", t("priceVt"), o?.unit, "Kč/kWh")}
-      <div data-offer-nt>${field("unitNt", t("priceNt"), o?.unitNt, "Kč/kWh")}</div>`
-          : field("unit", t("priceGas"), o?.unit, "Kč/kWh")
+      ${field("unit", t("priceVt"), o?.unit, `${cur()}/kWh`)}
+      <div data-offer-nt>${field("unitNt", t("priceNt"), o?.unitNt, `${cur()}/kWh`)}</div>`
+          : field("unit", t("priceGas"), o?.unit, `${cur()}/kWh`)
       }
       ${field("monthly", t("priceMonthly"), o?.monthly, t("kcPerMonth"))}
       <label class="field" for="of-note">${esc(t("note"))}</label>

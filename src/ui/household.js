@@ -1,7 +1,7 @@
 import { Chart } from "chart.js";
 import { SUPPLIED, byYear, monthAdd, yearTotal } from "../data.js";
 import { benchmarks, householdCosts } from "../household.js";
-import { fmt, fmtPct, t } from "../i18n.js";
+import { fmt, fmtPct, t, cur } from "../i18n.js";
 import { cssVar, esc } from "./dom.js";
 import { commodityIcon } from "./icons.js";
 import { currentMonth } from "./month-picker.js";
@@ -9,7 +9,7 @@ import { currentMonth } from "./month-picker.js";
 // The household tab of the overview: what electricity, gas and water cost together, by month and by year, and
 // how the use compares per m² and per person.
 const hh = { year: null };
-const kc = (v) => `${fmt(v, 0)} Kč`;
+const kc = (v) => `${fmt(v, 0)} ${cur()}`;
 const color = (c) => cssVar(`--${c}`);
 
 // A year's months and the same months a year earlier (a running year compares fairly).
@@ -78,15 +78,15 @@ export function householdHtml(state) {
         <h2>${esc(t("householdTitle"))}</h2>
         <div class="chips">${years.map((y) => `<button type="button" class="chip" data-hh-year="${y}" aria-pressed="${y === hh.year}">${y}</button>`).join("")}</div>
         <div class="stats">
-          <div class="stat"><div class="label">${esc(t("total"))} ${hh.year}</div><div class="value">${fmt(total, 0)}</div><div class="sub">Kč · ${esc(t("perMonth", { months }))}</div></div>
-          ${cmp ? `<div class="stat"><div class="label">${esc(t("vsLastYear", { year: hh.year - 1 }))}</div><div class="value ${cmp.change > 0 ? "up" : "down"}">${fmtPct(cmp.change)}</div><div class="sub">${fmt(cmp.now, 0)} / ${fmt(cmp.before, 0)} Kč</div></div>` : ""}
+          <div class="stat"><div class="label">${esc(t("total"))} ${hh.year}</div><div class="value">${fmt(total, 0)}</div><div class="sub">${cur()} · ${esc(t("perMonth", { months }))}</div></div>
+          ${cmp ? `<div class="stat"><div class="label">${esc(t("vsLastYear", { year: hh.year - 1 }))}</div><div class="value ${cmp.change > 0 ? "up" : "down"}">${fmtPct(cmp.change)}</div><div class="sub">${fmt(cmp.now, 0)} / ${fmt(cmp.before, 0)} ${cur()}</div></div>` : ""}
         </div>
         <div class="hh-parts">${per}</div>
         <div class="chart-box" style="margin-top:12px"><canvas id="hh-chart"></canvas></div>
       </section>
       <section class="card">
         <h2>${esc(t("householdYears"))}</h2>
-        <div class="table-wrap"><table><thead><tr><th>Kč</th>${cols.map((y) => `<th>${y}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>${cur()}</th>${cols.map((y) => `<th>${y}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table></div>
       </section>`;
   }
   const missingNote = missing.size ? `<p class="info-note">${esc(t("householdMissing", { list: [...missing].map((c) => t(c).toLowerCase()).join(", ") }))} <a href="#settings" data-settings-section="suppliers">${esc(t("tabSettings"))}</a></p>` : "";
