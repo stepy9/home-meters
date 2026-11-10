@@ -120,6 +120,9 @@ test("billing periods end in the chosen month", async () => {
   assert.deepEqual(billingPeriodOf(s, "water", "2026-11"), { from: "2026-09", to: "2026-11" });
   assert.deepEqual(billingPeriodOf(s, "water", "2026-12"), { from: "2026-12", to: "2027-02" });
   assert.equal(normalizeState(JSON.parse(stateText(s))).config.billingMonths.water, 3);
+  s = setConfig(s, { billingSkipsAdvance: { gas: true } });
+  assert.equal(s.config.billingSkipsAdvance.electricity, false);
+  assert.equal(normalizeState(JSON.parse(stateText(s))).config.billingSkipsAdvance.gas, true);
 });
 
 test("the billing forecast fills the months to come from a year earlier", async () => {

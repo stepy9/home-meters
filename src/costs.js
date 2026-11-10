@@ -51,6 +51,10 @@ export function billingPeriodOf(state, commodity, month) {
   return { from: monthAdd(to, 1 - length), to };
 }
 
+// The advance paid in a month: none in a billing period's last month when the bill comes instead.
+const advanceIn = (state, commodity, month, price) =>
+  state.config.billingSkipsAdvance?.[commodity] && billingPeriodOf(state, commodity, month).to === month ? 0 : (monthlyAdvance(price) ?? 0);
+
 const monthsOf = ({ from, to }) => Array.from({ length: monthDiff(from, to) + 1 }, (_, i) => monthAdd(from, i));
 
 // For a billing period (or a calendar year): what the months with a known cost cost, what was paid in advances
@@ -70,7 +74,7 @@ export function advanceBalance(state, commodity, period, costs = commodityCosts(
       continue;
     }
     cost += row.total;
-    paid += monthlyAdvance(priceAt(state, commodity, month)) ?? 0;
+    paid += advanceIn(state, commodity, month, priceAt(state, commodity, month));
     months += 1;
   }
   return { cost, paid, balance: paid - cost, months, missing };
@@ -132,13 +136,15 @@ export function forecastBilling(state, commodity, month) {
     if (!price || price.unit == null) priced = false;
     else {
       cost += monthCost(commodity, row, price).total;
-      paid += monthlyAdvance(price) ?? 0;
+      paid += advanceIn(state, commodity, m, price);
     }
   }
   const nowPrice = priceAt(state, commodity, month);
   const per = ADVANCE_PERIODS[nowPrice?.advancePeriod ?? "month"];
   // A suggested advance that covers the forecast cost, rounded up to a hundred crowns per payment.
-  const suggested = priced ? Math.ceil(((cost / (monthDiff(period.from, period.to) + 1)) * per) / 100) * 100 : null;
+  // Without an advance in the period's last month, the other months cover it.
+  const paying = monthDiff(period.from, period.to) + 1 - (state.config.billingSkipsAdvance?.[commodity] ? 1 : 0);
+  const suggested = priced ? Math.ceil(((cost / Math.max(paying, 1)) * per) / 100) * 100 : null;
   return {
     period,
     actualMonths,

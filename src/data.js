@@ -27,6 +27,8 @@ export const defaultConfig = () => ({
   billingEnd: { electricity: 12, gas: 12, water: 12 },
   // How many months one bill covers (water is often billed every quarter).
   billingMonths: { electricity: 12, gas: 12, water: 12 },
+  // Whether no advance is paid in the month a billing period ends with (the bill comes instead).
+  billingSkipsAdvance: { electricity: false, gas: false, water: false },
   location: null,
   // The house, for use per m² and per person: { area (m², heated), people, children (of them under six) }.
   house: { area: null, people: null, children: null },
@@ -112,6 +114,7 @@ export function normalizeState(raw) {
   if (c.location && isNumber(c.location.lat) && isNumber(c.location.lon)) state.config.location = { name: text(c.location.name, 120), lat: c.location.lat, lon: c.location.lon };
   for (const k of SUPPLIED) if (Number.isInteger(c.billingEnd?.[k]) && c.billingEnd[k] >= 1 && c.billingEnd[k] <= 12) state.config.billingEnd[k] = c.billingEnd[k];
   for (const k of SUPPLIED) if (BILLING_MONTHS.includes(c.billingMonths?.[k])) state.config.billingMonths[k] = c.billingMonths[k];
+  for (const k of SUPPLIED) if (typeof c.billingSkipsAdvance?.[k] === "boolean") state.config.billingSkipsAdvance[k] = c.billingSkipsAdvance[k];
   const positive = (v) => (isNumber(v) && v > 0 ? v : null);
   if (c.house) state.config.house = { area: positive(c.house.area), people: positive(c.house.people), children: positive(c.house.children) };
   if (isNumber(c.updatedAt)) state.config.updatedAt = c.updatedAt;
@@ -161,6 +164,7 @@ export function setConfig(state, changes, now = Date.now()) {
   const config = { ...state.config, ...changes, active: { ...state.config.active, ...changes.active } };
   config.billingEnd = { ...state.config.billingEnd, ...changes.billingEnd };
   config.billingMonths = { ...state.config.billingMonths, ...changes.billingMonths };
+  config.billingSkipsAdvance = { ...state.config.billingSkipsAdvance, ...changes.billingSkipsAdvance };
   config.house = { ...state.config.house, ...changes.house };
   return { ...state, config: { ...config, updatedAt: now } };
 }

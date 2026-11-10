@@ -285,6 +285,9 @@ function groupHtml(state, commodity) {
       <label class="billing-end">${esc(t("billingMonths"))}
         <select data-billing-months="${commodity}">${options(BILLING_MONTHS, state.config.billingMonths?.[commodity] ?? 12, (n) => t(`billingEvery.${n}`))}</select>
       </label>
+      <label class="billing-end">${esc(t("billingSkipsAdvance"))}
+        <input type="checkbox" data-billing-skips="${commodity}"${state.config.billingSkipsAdvance?.[commodity] ? " checked" : ""}>
+      </label>
       ${list.length ? list.map(itemHtml).join("") : `<p class="hint">${esc(t("suppliersEmptyOne"))}</p>`}
       ${open ? formHtml(commodity, current) : `<div class="btn-row"><button type="button" class="btn" data-add-supplier="${commodity}">+ ${esc(t("supplierAdd"))}</button></div>`}
     </div>`;
@@ -379,6 +382,9 @@ export function bindSuppliers(root, rerender) {
   );
   root.querySelectorAll("[data-billing-months]").forEach((select) =>
     select.addEventListener("change", () => update((state) => setConfig(state, { billingMonths: { [select.dataset.billingMonths]: Number(select.value) } }))),
+  );
+  root.querySelectorAll("[data-billing-skips]").forEach((box) =>
+    box.addEventListener("change", () => update((state) => setConfig(state, { billingSkipsAdvance: { [box.dataset.billingSkips]: box.checked } }))),
   );
   section.querySelectorAll("[data-toggle-prices]").forEach((b) =>
     b.addEventListener("click", () => {
