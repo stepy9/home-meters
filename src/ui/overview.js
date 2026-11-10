@@ -27,7 +27,10 @@ const saved = (() => {
 })();
 // money: costs in Kč instead of consumption.
 // quarters: charts and table by quarter instead of by month.
-const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, gasWeather: saved.gasWeather ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null };
+const ui = { commodity: saved.commodity ?? "electricity", gasInKwh: saved.gasInKwh ?? false, gasWeather: saved.gasWeather ?? false, money: saved.money ?? false, quarters: saved.quarters ?? false, year: null, compared: null, wide: new Set() };
+// Years a card shows unless it is maximized: older ones only crowd the chart and the table.
+const RECENT_YEARS = 5;
+const yearsOf = (years, card) => (ui.wide.has(card) ? years : years.slice(0, RECENT_YEARS));
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 const periodLabels = () => (ui.quarters ? QUARTERS : t("months"));
 const remember = () => {
@@ -42,7 +45,9 @@ const destroyCharts = () => charts.splice(0).forEach((c) => c.destroy());
 const commodityColor = { electricity: "--electricity", gas: "--gas", water: "--water" };
 // Years by how recent they are: blue, orange, green, magenta, gold, teal, so the newest few always contrast most.
 const yearColor = (years, year) => {
-  return cssVar(`--year-${years.indexOf(year) % 6}`);
+  const i = years.indexOf(year);
+  // Six distinct colors; any older year is muted rather than repeating a newer year's color.
+  return cssVar(i < 6 ? `--year-${i}` : "--muted");
 };
 
 const weatherOn = () => ui.commodity === "gas" && ui.gasWeather && !ui.money;
@@ -161,7 +166,7 @@ function yearChart(canvas, state, row) {
 }
 
 function compareChart(canvas, years, table) {
-  const shown = years.filter((y) => ui.compared.has(y));
+  const shown = yearsOf(years, "compare").filter((y) => ui.compared.has(y));
   charts.push(
     new Chart(canvas, {
       type: "line",
@@ -225,7 +230,7 @@ function priceChart(canvas, state) {
 }
 
 function tableHtml(years, table) {
-  const cols = years.slice(0, 6);
+  const cols = yearsOf(years, "table");
   const head = cols.map((y) => `<th>${y}</th>`).join("");
   const cell = (row, i, y) => {
     const cur = row[i];
@@ -341,6 +346,14 @@ function supplierCardHtml(state) {
 function renderHousehold(view, state) {
   const tabs = [...COMMODITIES, "home"].map((c) => `<button type="button" data-commodity="${c}" aria-pressed="${c === ui.commodity}" style="--c:${cssVar(commodityColor[c] ?? "--accent")}">${commodityIcon(c)}<span>${esc(t(c === "home" ? "householdTab" : c))}</span></button>`).join("");
   const { html, row } = householdHtml(state);
+  // A heading with a maximize button, offered only when there are more years than the card shows by default.
+  const cardHead = (title, card) => {
+    const on = ui.wide.has(card);
+    const label = esc(t(on ? "collapseCard" : "expandCard"));
+    const btn = years.length > RECENT_YEARS || on ? `<button type="button" class="card-max" data-wide="${card}" aria-pressed="${on}" title="${label}" aria-label="${label}">${on ? "⤡" : "⤢"}</button>` : "";
+    return `<div class="card-head"><h2>${esc(t(title))}</h2>${btn}</div>`;
+  };
+
   view.innerHTML = `${noticesHtml()}<div class="segmented">${tabs}</div>${html}`;
   drawHousehold(view, charts, row, () => renderOverview(view));
   bindTabs(view);
@@ -413,8 +426,8 @@ export function renderOverview(view) {
   const periodToggle = `<div class="segmented">${[false, true].map((q) => `<button type="button" data-quarters="${q}" aria-pressed="${q === ui.quarters}">${esc(t(q ? "viewQuarters" : "viewMonths"))}</button>`).join("")}</div>`;
   // All the view switches in one toolbar: one row on a wide screen, wrapping on a phone.
   const unitToggle = `<div class="toolbar">${moneyToggle}${periodToggle}${gasToggle}</div>`;
-  const yearChips = (attr, isOn, color) =>
-    `<div class="chips">${years.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
+  const yearChips = (attr, isOn, color, list = years) =>
+    `<div class="chips">${list.map((y) => `<button type="button" class="chip" ${attr}="${y}" aria-pressed="${isOn(y)}" style="color:${color(y)}">${y}</button>`).join("")}</div>`;
 
   view.innerHTML = `
     ${noticesHtml()}
@@ -436,13 +449,13 @@ export function renderOverview(view) {
         <div class="chart-box" style="margin-top:12px"><canvas id="year-chart"></canvas></div>
         ${marksLegendHtml(chartMarks(state))}
       </section>
-      <section class="card">
-        <h2>${esc(t("compareChart"))}</h2>
-        ${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y))}
+      <section class="card${ui.wide.has("compare") ? " wide" : ""}">
+        ${cardHead("compareChart", "compare")}
+        ${yearChips("data-compare", (y) => ui.compared.has(y), (y) => yearColor(years, y), yearsOf(years, "compare"))}
         <div class="chart-box"><canvas id="compare-chart"></canvas></div>
       </section>
-      <section class="card">
-        <h2>${esc(t("compareTable"))}</h2>
+      <section class="card${ui.wide.has("table") ? " wide" : ""}">
+        ${cardHead("compareTable", "table")}
         ${tableHtml(years, shown)}
       </section>`
         : ""
@@ -493,6 +506,16 @@ export function renderOverview(view) {
   view.querySelectorAll("[data-year]").forEach((b) =>
     b.addEventListener("click", () => {
       ui.year = Number(b.dataset.year);
+      renderOverview(view);
+    }),
+  );
+  view.querySelectorAll("[data-wide]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const card = b.dataset.wide;
+      if (ui.wide.has(card)) ui.wide.delete(card);
+      else ui.wide.add(card);
+      // Back to the recent years only: years no longer offered are switched off too.
+      if (card === "compare" && !ui.wide.has(card)) ui.compared = null;
       renderOverview(view);
     }),
   );

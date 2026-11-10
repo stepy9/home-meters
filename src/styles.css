@@ -113,6 +113,10 @@ main {
   margin: 12px 0;
 }
 .card h2 { margin: 0 0 10px; font-size: 17px; }
+.card-head { display: flex; align-items: flex-start; gap: 8px; }
+.card-head h2 { flex: 1; }
+.card-max { flex: none; margin: -4px -6px 0 0; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.card-max:hover, .card-max[aria-pressed="true"] { color: var(--text); background: var(--border); }
 .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
 .warn { color: var(--danger); font-size: 13px; margin: 6px 0 0; }
 
@@ -438,6 +442,9 @@ select {
   main[data-tab="overview"] > :not(.card) { column-span: all; }
   main[data-tab="overview"] > .card { break-inside: avoid; display: inline-block; width: 100%; margin: 0 0 12px; }
   main[data-tab="overview"] .chart-box { height: 300px; }
+  /* A maximized card spans both columns, with a taller chart. */
+  main[data-tab="overview"] > .card.wide { display: block; column-span: all; }
+  main[data-tab="overview"] > .card.wide .chart-box { height: 420px; }
 }
 .season-row { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 10px; align-items: baseline; font-size: 14px; margin-top: 6px; }
 .season-row .hint { grid-column: 1 / -1; margin: 0; }
